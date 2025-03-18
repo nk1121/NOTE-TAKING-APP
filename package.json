@@ -1,18 +1,12 @@
 {
   "name": "note-taking-app",
   "version": "1.0.0",
-  "description": "An open-source, cross-platform note-taking application",
+  "description": "An open-source, cross-platform note-taking app with cloud sync and text-to-speech",
   "main": "index.js",
-  "workspaces": ["backend", "frontend-web", "frontend-mobile"],
-  
   "scripts": {
-    "start:backend": "cd backend && npm start",
-    "start:web": "cd frontend-web && npm start",
-    "start:mobile": "cd frontend-mobile && npm run ios"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
-
-  "keywords": ["note-taking", "open-source", "cross-platform", "FOSS"],
-  "author": "Nandana Krishna",
+  "keywords": ["note-taking", "open-source", "cross-platform", "react", "nodejs", "nextcloud"],  "author": "",
   "license": "ISC",
   "type": "commonjs"
 }
