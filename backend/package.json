@@ -2,7 +2,11 @@
   "name": "note-taking-app",
   "version": "1.0.0",
   "description": "An open-source, cross-platform note-taking app with cloud sync and text-to-speech",
-  "workspaces": ["backend", "frontend-web", "frontend-mobile"],
+  "workspaces": [
+    "backend",
+    "frontend-web",
+    "frontend-mobile"
+  ],
   "main": "index.js",
   "scripts": {
     "start:backend": "cd backend && npm start",
@@ -11,8 +15,24 @@
     "install:all": "npm install && npm run install --workspaces",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": ["note-taking", "open-source", "cross-platform", "react", "nodejs", "nextcloud"],  "author": "",
+  "keywords": [
+    "note-taking",
+    "open-source",
+    "cross-platform",
+    "react",
+    "nodejs",
+    "nextcloud"
+  ],
+  "author": "",
   "license": "ISC",
-  "type": "commonjs"
-
+  "type": "commonjs",
+  "dependencies": {
+    "@google-cloud/text-to-speech": "^6.0.0",
+    "crypto": "^1.0.1",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "js-sha256": "^0.11.0",
+    "pg": "^8.14.1",
+    "webdav": "^5.8.0"
+  }
 }
