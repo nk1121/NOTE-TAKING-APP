@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, Navigate, Link } from 'react-router-dom';
 import { Navbar, Nav, Form, FormControl, Button, Dropdown, DropdownButton, Alert, Spinner } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSave, faEdit, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faSave, faEdit, faTrash, faUser, faCog, faSignOutAlt, faBell, faQuestionCircle, faInfoCircle, faLock, faTrashAlt, faBook, faFileExport, faCloud, faMoon, faFileContract } from '@fortawesome/free-solid-svg-icons';
 import SplashScreen from './components/SplashScreen';
 import LoginPage from './components/LoginPage';
 import RegisterPage from './components/RegisterPage';
 import ForgotPasswordPage from './components/ForgotPasswordPage';
 import ResetPasswordPage from './components/ResetPasswordPage';
+import ProfilePage from './components/ProfilePage';
+import ChangePasswordPage from './components/ChangePasswordPage';
 import './App.css';
 
 const MainApp = ({ onLogout }) => {
@@ -20,6 +22,7 @@ const MainApp = ({ onLogout }) => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [editingNoteId, setEditingNoteId] = useState(null);
+  const [theme, setTheme] = useState('light');
 
   useEffect(() => {
     fetchNotes();
@@ -108,6 +111,33 @@ const MainApp = ({ onLogout }) => {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    if (!window.confirm('Are you sure you want to delete your account? This action cannot be undone.')) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:5000/delete-account', {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to delete account');
+
+      onLogout();
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const toggleTheme = () => {
+    const newTheme = theme === 'light' ? 'dark' : 'light';
+    setTheme(newTheme);
+    document.body.setAttribute('data-theme', newTheme);
+  };
+
   const addTag = () => {
     if (newTag && !tags.includes(newTag)) {
       setTags([...tags, newTag]);
@@ -132,8 +162,7 @@ const MainApp = ({ onLogout }) => {
     <div className="app">
       <Navbar bg="dark" variant="dark" expand="lg" className="justify-content-between shadow-sm">
         <Navbar.Brand href="#home" className="d-flex align-items-center">
-          <img src="https://via.placeholder.com/30" alt="User" className="rounded-circle mr-2" />
-          {localStorage.getItem('username') || 'Guest'}
+          Note App
         </Navbar.Brand>
         <Form inline>
           <FormControl type="text" placeholder="Search notes..." className="mr-sm-2 search-input" />
@@ -150,10 +179,10 @@ const MainApp = ({ onLogout }) => {
 
       <div className="d-flex flex-grow-1">
         <Nav className="flex-column sidebar p-3" style={{ minHeight: 'calc(100vh - 56px)' }}>
-          <Nav.Link href="#write" className="active sidebar-item" style={{ background: 'linear-gradient(45deg, #007bff, #0056b3)' }}>
+          <Nav.Link as={Link} to="/app" className="active sidebar-item" style={{ background: 'linear-gradient(45deg, #007bff, #0056b3)' }}>
             Write Note
           </Nav.Link>
-          <Nav.Link href="#all-notes" className="sidebar-item">
+          <Nav.Link as={Link} to="/app" className="sidebar-item">
             All Notes <span className="badge badge-light">{notes.length}</span>
           </Nav.Link>
           <Nav.Link href="#recent" className="sidebar-item text-success">Recent</Nav.Link>
@@ -181,90 +210,159 @@ const MainApp = ({ onLogout }) => {
               ))}
             </Dropdown.Menu>
           </Dropdown>
-          <Nav.Link href="#nextcloud" className="sidebar-item text-purple">NextCloud Sync</Nav.Link>
-          <Nav.Link href="#export" className="sidebar-item text-purple">Export Notes</Nav.Link>
+          <Nav.Link href="#export" className="sidebar-item text-purple">
+            <FontAwesomeIcon icon={faFileExport} className="mr-2" /> Export Notes
+          </Nav.Link>
+          <Nav.Link href="#nextcloud" className="sidebar-item text-purple">
+            <FontAwesomeIcon icon={faCloud} className="mr-2" /> NextCloud Sync
+          </Nav.Link>
+          <div className="mt-auto">
+            <Dropdown drop="up">
+              <Dropdown.Toggle variant="dark" id="dropdown-user" className="w-100 text-left sidebar-item" aria-label="User Profile Menu">
+                <img src="https://via.placeholder.com/30" alt="User" className="rounded-circle mr-2" />
+                {localStorage.getItem('username') || 'Guest'}
+              </Dropdown.Toggle>
+              <Dropdown.Menu className="bg-dark text-white w-100">
+                <Dropdown.Header>Account Management</Dropdown.Header>
+                <Dropdown.Item as={Link} to="/profile" aria-label="View and edit profile">
+                  <FontAwesomeIcon icon={faUser} className="mr-2" /> Profile
+                </Dropdown.Item>
+                <Dropdown.Item as={Link} to="/change-password" aria-label="Change password">
+                  <FontAwesomeIcon icon={faLock} className="mr-2" /> Change Password
+                </Dropdown.Item>
+                <Dropdown.Item href="#account-settings" aria-label="Account settings">
+                  <FontAwesomeIcon icon={faCog} className="mr-2" /> Account Settings
+                </Dropdown.Item>
+                <Dropdown.Item onClick={onLogout} aria-label="Sign out">
+                  <FontAwesomeIcon icon={faSignOutAlt} className="mr-2" /> Sign Out
+                </Dropdown.Item>
+                <Dropdown.Item onClick={handleDeleteAccount} className="text-danger" aria-label="Delete account">
+                  <FontAwesomeIcon icon={faTrashAlt} className="mr-2" /> Delete Account
+                </Dropdown.Item>
+                <Dropdown.Divider />
+                <Dropdown.Header>App Options</Dropdown.Header>
+                <Dropdown.Item onClick={toggleTheme} aria-label="Toggle theme">
+                  <FontAwesomeIcon icon={faMoon} className="mr-2" /> {theme === 'light' ? 'Dark Mode' : 'Light Mode'}
+                </Dropdown.Item>
+                <Dropdown.Item href="#notifications" aria-label="View notifications">
+                  <FontAwesomeIcon icon={faBell} className="mr-2" /> Notifications
+                </Dropdown.Item>
+                <Dropdown.Item href="#settings" aria-label="App settings">
+                  <FontAwesomeIcon icon={faCog} className="mr-2" /> Settings
+                </Dropdown.Item>
+                <Dropdown.Item href="#help" aria-label="Help and support">
+                  <FontAwesomeIcon icon={faQuestionCircle} className="mr-2" /> Help/Support
+                </Dropdown.Item>
+                <Dropdown.Item href="#guides" aria-label="User guides and tutorials">
+                  <FontAwesomeIcon icon={faBook} className="mr-2" /> User Guides
+                </Dropdown.Item>
+                <Dropdown.Item href="#switch-accounts" aria-label="Switch accounts">
+                  <FontAwesomeIcon icon={faUser} className="mr-2" /> Switch Accounts
+                </Dropdown.Item>
+                <Dropdown.Divider />
+                <Dropdown.Header>Information</Dropdown.Header>
+                <Dropdown.Item href="#about" aria-label="About the app">
+                  <FontAwesomeIcon icon={faInfoCircle} className="mr-2" /> About
+                </Dropdown.Item>
+                <Dropdown.Item href="#privacy" aria-label="Privacy policy">
+                  <FontAwesomeIcon icon={faFileContract} className="mr-2" /> Privacy Policy
+                </Dropdown.Item>
+                <Dropdown.Item href="#terms" aria-label="Terms of service">
+                  <FontAwesomeIcon icon={faFileContract} className="mr-2" /> Terms of Service
+                </Dropdown.Item>
+              </Dropdown.Menu>
+            </Dropdown>
+          </div>
         </Nav>
 
         <div className="flex-grow-1 p-4 note-editor-container">
-          <div className="note-editor card p-4 shadow-lg mb-4">
-            <input
-              type="text"
-              placeholder="Note title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="note-title"
-            />
-            <div className="editor-options mt-2">
-              <DropdownButton variant="secondary" title="Normal" size="sm" className="mr-2">
-                <Dropdown.Item>Normal</Dropdown.Item>
-                <Dropdown.Item>Heading</Dropdown.Item>
-              </DropdownButton>
-              <DropdownButton variant="secondary" title="White" size="sm" className="mr-2">
-                <Dropdown.Item>White</Dropdown.Item>
-                <Dropdown.Item>Dark</Dropdown.Item>
-              </DropdownButton>
-              <Button variant="light" size="sm" className="mr-1">B</Button>
-              <Button variant="light" size="sm" className="mr-1">I</Button>
-              <Button variant="light" size="sm" className="mr-1">U</Button>
-              <Button variant="light" size="sm"><span role="img" aria-label="link">🔗</span></Button>
-            </div>
-            <textarea
-              placeholder="Write your note here..."
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              className="note-content mt-3"
-            />
-            {error && <Alert variant="danger" className="mt-3">{error}</Alert>}
-            <div className="d-flex justify-content-between align-items-center mt-3">
-              <div>
-                {tags.map((tag) => (
-                  <span key={tag} className="badge badge-secondary mr-1">
-                    {tag} <span className="ml-1 text-danger" onClick={() => removeTag(tag)}>×</span>
-                  </span>
-                ))}
-              </div>
-              <div>
-                <DropdownButton variant="secondary" title={category} size="sm" className="mr-2">
-                  {['Work', 'Personal', 'Ideas', 'Important', 'Web Development', 'Databases', 'Mobile', 'Programming'].map((cat) => (
-                    <Dropdown.Item key={cat} onClick={() => setCategory(cat)}>{cat}</Dropdown.Item>
-                  ))}
-                </DropdownButton>
-                <Button variant="primary" onClick={handleSaveNote} className="save-button" disabled={loading}>
-                  {loading ? <Spinner animation="border" size="sm" /> : <FontAwesomeIcon icon={faSave} className="mr-2" />}
-                  {editingNoteId ? 'Update Note' : 'Save Note'}
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          <div className="notes-list">
-            <h3>All Notes</h3>
-            {loading && <Spinner animation="border" />}
-            {!loading && notes.length === 0 && <p>No notes available.</p>}
-            {notes.map((note) => (
-              <div key={note.id} className="note-item card p-3 mb-3 shadow-sm">
-                <div className="d-flex justify-content-between">
-                  <div>
-                    <h5>{note.title}</h5>
-                    <p>{note.content}</p>
+          <Routes>
+            <Route path="/app" element={
+              <>
+                <div className="note-editor card p-4 shadow-lg mb-4">
+                  <input
+                    type="text"
+                    placeholder="Note title"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    className="note-title"
+                  />
+                  <div className="editor-options mt-2">
+                    <DropdownButton variant="secondary" title="Normal" size="sm" className="mr-2">
+                      <Dropdown.Item>Normal</Dropdown.Item>
+                      <Dropdown.Item>Heading</Dropdown.Item>
+                    </DropdownButton>
+                    <DropdownButton variant="secondary" title="White" size="sm" className="mr-2">
+                      <Dropdown.Item>White</Dropdown.Item>
+                      <Dropdown.Item>Dark</Dropdown.Item>
+                    </DropdownButton>
+                    <Button variant="light" size="sm" className="mr-1">B</Button>
+                    <Button variant="light" size="sm" className="mr-1">I</Button>
+                    <Button variant="light" size="sm" className="mr-1">U</Button>
+                    <Button variant="light" size="sm"><span role="img" aria-label="link">🔗</span></Button>
+                  </div>
+                  <textarea
+                    placeholder="Write your note here..."
+                    value={content}
+                    onChange={(e) => setContent(e.target.value)}
+                    className="note-content mt-3"
+                  />
+                  {error && <Alert variant="danger" className="mt-3">{error}</Alert>}
+                  <div className="d-flex justify-content-between align-items-center mt-3">
                     <div>
-                      {note.tags.map((tag) => (
-                        <span key={tag} className="badge badge-secondary mr-1">{tag}</span>
+                      {tags.map((tag) => (
+                        <span key={tag} className="badge badge-secondary mr-1">
+                          {tag} <span className="ml-1 text-danger" onClick={() => removeTag(tag)}>×</span>
+                        </span>
                       ))}
                     </div>
-                  </div>
-                  <div>
-                    <Button variant="outline-primary" size="sm" className="mr-2" onClick={() => handleEditNote(note)}>
-                      <FontAwesomeIcon icon={faEdit} />
-                    </Button>
-                    <Button variant="outline-danger" size="sm" onClick={() => handleDeleteNote(note.id)}>
-                      <FontAwesomeIcon icon={faTrash} />
-                    </Button>
+                    <div>
+                      <DropdownButton variant="secondary" title={category} size="sm" className="mr-2">
+                        {['Work', 'Personal', 'Ideas', 'Important', 'Web Development', 'Databases', 'Mobile', 'Programming'].map((cat) => (
+                          <Dropdown.Item key={cat} onClick={() => setCategory(cat)}>{cat}</Dropdown.Item>
+                        ))}
+                      </DropdownButton>
+                      <Button variant="primary" onClick={handleSaveNote} className="save-button" disabled={loading}>
+                        {loading ? <Spinner animation="border" size="sm" /> : <FontAwesomeIcon icon={faSave} className="mr-2" />}
+                        {editingNoteId ? 'Update Note' : 'Save Note'}
+                      </Button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+
+                <div className="notes-list">
+                  <h3>All Notes</h3>
+                  {loading && <Spinner animation="border" />}
+                  {!loading && notes.length === 0 && <p>No notes available.</p>}
+                  {notes.map((note) => (
+                    <div key={note.id} className="note-item card p-3 mb-3 shadow-sm">
+                      <div className="d-flex justify-content-between">
+                        <div>
+                          <h5>{note.title}</h5>
+                          <p>{note.content}</p>
+                          <div>
+                            {note.tags.map((tag) => (
+                              <span key={tag} className="badge badge-secondary mr-1">{tag}</span>
+                            ))}
+                          </div>
+                        </div>
+                        <div>
+                          <Button variant="outline-primary" size="sm" className="mr-2" onClick={() => handleEditNote(note)}>
+                            <FontAwesomeIcon icon={faEdit} />
+                          </Button>
+                          <Button variant="outline-danger" size="sm" onClick={() => handleDeleteNote(note.id)}>
+                            <FontAwesomeIcon icon={faTrash} />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            } />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/change-password" element={<ChangePasswordPage />} />
+          </Routes>
         </div>
       </div>
     </div>
@@ -311,7 +409,7 @@ const App = () => {
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
-        <Route path="/app" element={<MainApp onLogout={handleLogout} />} />
+        <Route path="/*" element={<MainApp onLogout={handleLogout} />} />
       </Routes>
     </Router>
   );

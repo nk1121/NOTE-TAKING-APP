@@ -48,7 +48,7 @@ const authenticateToken = (req, res, next) => {
 
 app.post('/register', async (req, res) => {
   try {
-    const { email, username, password } = req.body;
+    const { email, username, password, name, profile_picture, bio } = req.body;
     if (!email || !username || !password) {
       return res.status(400).json({ error: 'Email, username, and password are required' });
     }
@@ -71,8 +71,8 @@ app.post('/register', async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
     const result = await pool.query(
-      'INSERT INTO users (email, username, password) VALUES ($1, $2, $3) RETURNING id, email, username',
-      [email, username, hashedPassword]
+      'INSERT INTO users (email, username, password, name, profile_picture, bio) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, email, username, name, profile_picture, bio',
+      [email, username, hashedPassword, name || null, profile_picture || null, bio || null]
     );
 
     res.status(201).json({ message: 'User registered successfully', user: result.rows[0] });
@@ -183,6 +183,94 @@ app.post('/reset-password', async (req, res) => {
   } catch (err) {
     console.error('Error resetting password:', err);
     res.status(500).json({ error: 'Server error while resetting password' });
+  }
+});
+
+app.post('/change-password', authenticateToken, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: 'Current and new password are required' });
+    }
+
+    const result = await pool.query('SELECT * FROM users WHERE id = $1', [req.user.id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const user = result.rows[0];
+    const match = await bcrypt.compare(currentPassword, user.password);
+    if (!match) {
+      return res.status(401).json({ error: 'Current password is incorrect' });
+    }
+
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+
+    await pool.query('UPDATE users SET password = $1, updated_at = NOW() WHERE id = $2', [hashedPassword, user.id]);
+    res.json({ message: 'Password changed successfully' });
+  } catch (err) {
+    console.error('Error changing password:', err);
+    res.status(500).json({ error: 'Server error while changing password' });
+  }
+});
+
+app.get('/profile', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query('SELECT id, email, username, name, profile_picture, bio FROM users WHERE id = $1', [req.user.id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error fetching profile:', err);
+    res.status(500).json({ error: 'Server error while fetching profile' });
+  }
+});
+
+app.put('/profile', authenticateToken, async (req, res) => {
+  try {
+    const { email, username, name, profile_picture, bio } = req.body;
+    if (!email || !username) {
+      return res.status(400).json({ error: 'Email and username are required' });
+    }
+
+    if (username.length > 10) {
+      return res.status(400).json({ error: 'Username must be 10 characters or less' });
+    }
+
+    const emailExists = await pool.query('SELECT * FROM users WHERE email = $1 AND id != $2', [email, req.user.id]);
+    if (emailExists.rows.length > 0) {
+      return res.status(400).json({ error: 'Email already exists' });
+    }
+
+    const usernameExists = await pool.query('SELECT * FROM users WHERE username = $1 AND id != $2', [username, req.user.id]);
+    if (usernameExists.rows.length > 0) {
+      return res.status(400).json({ error: 'Username already exists' });
+    }
+
+    const result = await pool.query(
+      'UPDATE users SET email = $1, username = $2, name = $3, profile_picture = $4, bio = $5, updated_at = NOW() WHERE id = $6 RETURNING id, email, username, name, profile_picture, bio',
+      [email, username, name || null, profile_picture || null, bio || null, req.user.id]
+    );
+
+    res.json({ message: 'Profile updated successfully', user: result.rows[0] });
+  } catch (err) {
+    console.error('Error updating profile:', err);
+    res.status(500).json({ error: 'Server error while updating profile' });
+  }
+});
+
+app.delete('/delete-account', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query('DELETE FROM users WHERE id = $1 RETURNING id', [req.user.id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    res.json({ message: 'Account deleted successfully' });
+  } catch (err) {
+    console.error('Error deleting account:', err);
+    res.status(500).json({ error: 'Server error while deleting account' });
   }
 });
 

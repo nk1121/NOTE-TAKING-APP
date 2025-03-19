@@ -7,6 +7,9 @@ import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
 const RegisterPage = () => {
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
+  const [name, setName] = useState('');
+  const [profilePicture, setProfilePicture] = useState('');
+  const [bio, setBio] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
@@ -33,7 +36,7 @@ const RegisterPage = () => {
     if (!password) setPasswordError(true);
     if (!confirmPassword) setConfirmPasswordError(true);
     if (!email || !username || !password || !confirmPassword) {
-      setError('Please fill in all fields.');
+      setError('Please fill in all required fields.');
       return;
     }
 
@@ -54,7 +57,7 @@ const RegisterPage = () => {
       const response = await fetch('http://localhost:5000/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, username, password }),
+        body: JSON.stringify({ email, username, password, name, profile_picture: profilePicture, bio }),
       });
 
       const data = await response.json();
@@ -93,7 +96,7 @@ const RegisterPage = () => {
         {success && <Alert variant="success" className="text-center">{success}</Alert>}
         <Form onSubmit={handleRegister}>
           <Form.Group controlId="email" className="mb-3">
-            <Form.Label>Email Address</Form.Label>
+            <Form.Label>Email Address *</Form.Label>
             <Form.Control
               type="email"
               placeholder="Enter email"
@@ -104,7 +107,7 @@ const RegisterPage = () => {
             {emailError && <div className="invalid-feedback">Email is required or already exists</div>}
           </Form.Group>
           <Form.Group controlId="username" className="mb-3">
-            <Form.Label>Username (max 10 characters)</Form.Label>
+            <Form.Label>Username (max 10 characters) *</Form.Label>
             <Form.Control
               type="text"
               placeholder="Enter username"
@@ -115,8 +118,36 @@ const RegisterPage = () => {
             />
             {usernameError && <div className="invalid-feedback">Username is required or already exists</div>}
           </Form.Group>
+          <Form.Group controlId="name" className="mb-3">
+            <Form.Label>Full Name</Form.Label>
+            <Form.Control
+              type="text"
+              placeholder="Enter your full name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </Form.Group>
+          <Form.Group controlId="profilePicture" className="mb-3">
+            <Form.Label>Profile Picture URL</Form.Label>
+            <Form.Control
+              type="text"
+              placeholder="Enter profile picture URL"
+              value={profilePicture}
+              onChange={(e) => setProfilePicture(e.target.value)}
+            />
+          </Form.Group>
+          <Form.Group controlId="bio" className="mb-3">
+            <Form.Label>Bio</Form.Label>
+            <Form.Control
+              as="textarea"
+              rows={3}
+              placeholder="Tell us about yourself"
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
+            />
+          </Form.Group>
           <Form.Group controlId="password" className="mb-3">
-            <Form.Label>Password</Form.Label>
+            <Form.Label>Password *</Form.Label>
             <InputGroup>
               <Form.Control
                 type={showPassword ? 'text' : 'password'}
@@ -132,7 +163,7 @@ const RegisterPage = () => {
             </InputGroup>
           </Form.Group>
           <Form.Group controlId="confirmPassword" className="mb-3">
-            <Form.Label>Confirm Password</Form.Label>
+            <Form.Label>Confirm Password *</Form.Label>
             <InputGroup>
               <Form.Control
                 type={showConfirmPassword ? 'text' : 'password'}
