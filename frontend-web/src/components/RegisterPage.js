@@ -5,6 +5,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
 
 const RegisterPage = () => {
+  const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -12,6 +13,7 @@ const RegisterPage = () => {
   const [success, setSuccess] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [emailError, setEmailError] = useState(false);
   const [usernameError, setUsernameError] = useState(false);
   const [passwordError, setPasswordError] = useState(false);
   const [confirmPasswordError, setConfirmPasswordError] = useState(false);
@@ -21,15 +23,23 @@ const RegisterPage = () => {
     e.preventDefault();
     setError('');
     setSuccess('');
+    setEmailError(false);
     setUsernameError(false);
     setPasswordError(false);
     setConfirmPasswordError(false);
 
+    if (!email) setEmailError(true);
     if (!username) setUsernameError(true);
     if (!password) setPasswordError(true);
     if (!confirmPassword) setConfirmPasswordError(true);
-    if (!username || !password || !confirmPassword) {
+    if (!email || !username || !password || !confirmPassword) {
       setError('Please fill in all fields.');
+      return;
+    }
+
+    if (username.length > 10) {
+      setUsernameError(true);
+      setError('Username must be 10 characters or less.');
       return;
     }
 
@@ -44,11 +54,14 @@ const RegisterPage = () => {
       const response = await fetch('http://localhost:5000/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ email, username, password }),
       });
 
       const data = await response.json();
       if (!response.ok) {
+        if (data.error === 'Email already exists') {
+          setEmailError(true);
+        }
         if (data.error === 'Username already exists') {
           setUsernameError(true);
         }
@@ -79,16 +92,28 @@ const RegisterPage = () => {
         {error && <Alert variant="danger" className="text-center">{error}</Alert>}
         {success && <Alert variant="success" className="text-center">{success}</Alert>}
         <Form onSubmit={handleRegister}>
-          <Form.Group controlId="username" className="mb-3">
+          <Form.Group controlId="email" className="mb-3">
             <Form.Label>Email Address</Form.Label>
             <Form.Control
               type="email"
               placeholder="Enter email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className={emailError ? 'is-invalid' : ''}
+            />
+            {emailError && <div className="invalid-feedback">Email is required or already exists</div>}
+          </Form.Group>
+          <Form.Group controlId="username" className="mb-3">
+            <Form.Label>Username (max 10 characters)</Form.Label>
+            <Form.Control
+              type="text"
+              placeholder="Enter username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               className={usernameError ? 'is-invalid' : ''}
+              maxLength={10}
             />
-            {usernameError && <div className="invalid-feedback">Email is required or already exists</div>}
+            {usernameError && <div className="invalid-feedback">Username is required or already exists</div>}
           </Form.Group>
           <Form.Group controlId="password" className="mb-3">
             <Form.Label>Password</Form.Label>

@@ -23,7 +23,6 @@ pool.connect((err) => {
   else console.log('Connected to PostgreSQL');
 });
 
-// Set up Nodemailer transporter
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
@@ -32,7 +31,6 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// Middleware to verify JWT
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
@@ -48,16 +46,24 @@ const authenticateToken = (req, res, next) => {
   }
 };
 
-// Register a new user
 app.post('/register', async (req, res) => {
   try {
-    const { username, password } = req.body;
-    if (!username || !password) {
-      return res.status(400).json({ error: 'Username and password are required' });
+    const { email, username, password } = req.body;
+    if (!email || !username || !password) {
+      return res.status(400).json({ error: 'Email, username, and password are required' });
     }
 
-    const userExists = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
-    if (userExists.rows.length > 0) {
+    if (username.length > 10) {
+      return res.status(400).json({ error: 'Username must be 10 characters or less' });
+    }
+
+    const emailExists = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+    if (emailExists.rows.length > 0) {
+      return res.status(400).json({ error: 'Email already exists' });
+    }
+
+    const usernameExists = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
+    if (usernameExists.rows.length > 0) {
       return res.status(400).json({ error: 'Username already exists' });
     }
 
@@ -65,8 +71,8 @@ app.post('/register', async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
     const result = await pool.query(
-      'INSERT INTO users (username, password) VALUES ($1, $2) RETURNING id, username',
-      [username, hashedPassword]
+      'INSERT INTO users (email, username, password) VALUES ($1, $2, $3) RETURNING id, email, username',
+      [email, username, hashedPassword]
     );
 
     res.status(201).json({ message: 'User registered successfully', user: result.rows[0] });
@@ -76,65 +82,60 @@ app.post('/register', async (req, res) => {
   }
 });
 
-// Login
 app.post('/login', async (req, res) => {
   try {
-    const { username, password } = req.body;
-    if (!username || !password) {
-      return res.status(400).json({ error: 'Username and password are required' });
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
     }
 
-    const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
+    const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
     if (result.rows.length === 0) {
-      return res.status(401).json({ error: 'Invalid username or password' });
+      return res.status(401).json({ error: 'Invalid email or password' });
     }
 
     const user = result.rows[0];
     const match = await bcrypt.compare(password, user.password);
     if (!match) {
-      return res.status(401).json({ error: 'Invalid username or password' });
+      return res.status(401).json({ error: 'Invalid email or password' });
     }
 
-    const token = jwt.sign({ id: user.id, username: user.username }, process.env.JWT_SECRET, {
+    const token = jwt.sign({ id: user.id, email: user.email, username: user.username }, process.env.JWT_SECRET, {
       expiresIn: '1h',
     });
 
-    res.json({ token });
+    res.json({ token, username: user.username });
   } catch (err) {
     console.error('Error logging in:', err);
     res.status(500).json({ error: 'Server error while logging in' });
   }
 });
 
-// Forgot Password
 app.post('/forgot-password', async (req, res) => {
   try {
-    const { username } = req.body;
-    if (!username) {
+    const { email } = req.body;
+    if (!email) {
       return res.status(400).json({ error: 'Email is required' });
     }
 
-    const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
+    const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'User not found' });
     }
 
     const user = result.rows[0];
-
-    // Generate a reset token
     const token = crypto.randomBytes(32).toString('hex');
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour from now
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
 
     await pool.query(
       'INSERT INTO password_reset_tokens (user_id, token, expires_at) VALUES ($1, $2, $3)',
       [user.id, token, expiresAt]
     );
 
-    // Send email with reset link
     const resetLink = `http://localhost:3000/reset-password?token=${token}`;
     const mailOptions = {
       from: process.env.EMAIL_USER,
-      to: username,
+      to: email,
       subject: 'Password Reset Request for Note-Taking App',
       html: `
         <h2>Password Reset Request</h2>
@@ -154,7 +155,6 @@ app.post('/forgot-password', async (req, res) => {
   }
 });
 
-// Reset Password
 app.post('/reset-password', async (req, res) => {
   try {
     const { token, newPassword } = req.body;
@@ -186,7 +186,6 @@ app.post('/reset-password', async (req, res) => {
   }
 });
 
-// Protect note routes with JWT
 app.get('/notes', authenticateToken, async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM notes ORDER BY created_at DESC');

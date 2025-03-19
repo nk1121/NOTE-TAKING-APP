@@ -133,7 +133,7 @@ const MainApp = ({ onLogout }) => {
       <Navbar bg="dark" variant="dark" expand="lg" className="justify-content-between shadow-sm">
         <Navbar.Brand href="#home" className="d-flex align-items-center">
           <img src="https://via.placeholder.com/30" alt="User" className="rounded-circle mr-2" />
-          {localStorage.getItem('username') || 'Demo User'}
+          {localStorage.getItem('username') || 'Guest'}
         </Navbar.Brand>
         <Form inline>
           <FormControl type="text" placeholder="Search notes..." className="mr-sm-2 search-input" />

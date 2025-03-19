@@ -5,23 +5,23 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
 
 const LoginPage = ({ onLogin }) => {
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [usernameError, setUsernameError] = useState(false);
+  const [emailError, setEmailError] = useState(false);
   const [passwordError, setPasswordError] = useState(false);
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
-    setUsernameError(false);
+    setEmailError(false);
     setPasswordError(false);
 
-    if (!username) setUsernameError(true);
+    if (!email) setEmailError(true);
     if (!password) setPasswordError(true);
-    if (!username || !password) {
+    if (!email || !password) {
       setError('Please fill in all fields.');
       return;
     }
@@ -30,20 +30,20 @@ const LoginPage = ({ onLogin }) => {
       const response = await fetch('http://localhost:5000/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ email, password }),
       });
 
       const data = await response.json();
       if (!response.ok) {
-        if (data.error === 'Invalid username or password') {
-          setUsernameError(true);
+        if (data.error === 'Invalid email or password') {
+          setEmailError(true);
           setPasswordError(true);
         }
         throw new Error(data.error || 'Login failed');
       }
 
       localStorage.setItem('token', data.token);
-      localStorage.setItem('username', username);
+      localStorage.setItem('username', data.username); // Store the username
       onLogin();
       navigate('/app');
     } catch (err) {
@@ -65,16 +65,16 @@ const LoginPage = ({ onLogin }) => {
           </Alert>
         )}
         <Form onSubmit={handleLogin}>
-          <Form.Group controlId="username" className="mb-3">
+          <Form.Group controlId="email" className="mb-3">
             <Form.Label>Email Address</Form.Label>
             <Form.Control
               type="email"
               placeholder="Enter email"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className={usernameError ? 'is-invalid' : ''}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className={emailError ? 'is-invalid' : ''}
             />
-            {usernameError && <div className="invalid-feedback">Email is required</div>}
+            {emailError && <div className="invalid-feedback">Email is required</div>}
           </Form.Group>
           <Form.Group controlId="password" className="mb-3">
             <Form.Label>Password</Form.Label>

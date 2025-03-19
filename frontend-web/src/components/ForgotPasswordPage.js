@@ -3,19 +3,19 @@ import { Form, Button, Alert } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 
 const ForgotPasswordPage = () => {
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [usernameError, setUsernameError] = useState(false);
+  const [emailError, setEmailError] = useState(false);
 
   const handleForgotPassword = async (e) => {
     e.preventDefault();
     setError('');
     setSuccess('');
-    setUsernameError(false);
+    setEmailError(false);
 
-    if (!username) {
-      setUsernameError(true);
+    if (!email) {
+      setEmailError(true);
       setError('Please enter your email.');
       return;
     }
@@ -24,13 +24,13 @@ const ForgotPasswordPage = () => {
       const response = await fetch('http://localhost:5000/forgot-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username }),
+        body: JSON.stringify({ email }),
       });
 
       const data = await response.json();
       if (!response.ok) {
         if (data.error === 'User not found') {
-          setUsernameError(true);
+          setEmailError(true);
         }
         throw new Error(data.error || 'Failed to send reset email');
       }
@@ -48,16 +48,16 @@ const ForgotPasswordPage = () => {
         {error && <Alert variant="danger" className="text-center">{error}</Alert>}
         {success && <Alert variant="success" className="text-center">{success}</Alert>}
         <Form onSubmit={handleForgotPassword}>
-          <Form.Group controlId="username" className="mb-3">
+          <Form.Group controlId="email" className="mb-3">
             <Form.Label>Email Address</Form.Label>
             <Form.Control
               type="email"
               placeholder="Enter your email"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className={usernameError ? 'is-invalid' : ''}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className={emailError ? 'is-invalid' : ''}
             />
-            {usernameError && <div className="invalid-feedback">Email is required or not found</div>}
+            {emailError && <div className="invalid-feedback">Email is required or not found</div>}
           </Form.Group>
           <Button variant="primary" type="submit" className="w-100 login-button mb-3">
             Send Reset Link
