@@ -1,9 +1,13 @@
+
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate, Link } from 'react-router-dom';
-import { Navbar, Nav, Form, FormControl, Button, Dropdown, DropdownButton, Alert, Spinner } from 'react-bootstrap';
+import { Navbar, Nav, Form, FormControl, Button, Alert, Spinner } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSave, faEdit, faTrash, faUser, faFileExport, faCloud, faSearch, faPlay, faPause, faRedo, faStar as faStarSolid } from '@fortawesome/free-solid-svg-icons';
+import { faSave, faEdit, faTrash, faUser, faFileExport, faCloud, faSearch, faPlay, faPause, faRedo, faStar as faStarSolid, faVolumeUp, faStop } from '@fortawesome/free-solid-svg-icons';
 import { faStar as faStarRegular } from '@fortawesome/free-regular-svg-icons';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
+import DOMPurify from 'dompurify';
 import SplashScreen from './components/SplashScreen';
 import LoginPage from './components/LoginPage';
 import RegisterPage from './components/RegisterPage';
@@ -14,16 +18,57 @@ import './App.css';
 
 const MainApp = ({ onLogout, toggleTheme, theme }) => {
   const [notes, setNotes] = useState([]);
-  const [favorites, setFavorites] = useState([]); // State to track favorite notes
+  const [favorites, setFavorites] = useState([]);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [category, setCategory] = useState('Select Category');
   const [tags, setTags] = useState([]);
-  const [newTag, setNewTag] = useState('');
+  const [tagInput, setTagInput] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [editingNoteId, setEditingNoteId] = useState(null);
-  const [currentView, setCurrentView] = useState('all'); // State to track the current view (all or favorites)
+  const [currentView, setCurrentView] = useState('write');
+  const [selectedTag, setSelectedTag] = useState(null);
+  const [isSpeaking, setIsSpeaking] = useState(false); // Track if speech is active
+
+  // Define the color palette based on the 5x4 grid
+  const colorPalette = [
+    '#D4EFDF', '#FFFFCC', '#FFD1DC', '#E6E6FA', '#E0F7FA',
+    '#00FF00', '#FFFF00', '#FF0000', '#800080', '#0000FF',
+    '#008000', '#FFA500', '#FF4500', '#4B0082', '#00008B',
+    '#FFFFFF', '#D3D3D3', '#808080', '#000000', '#2F4F4F',
+  ];
+
+  // React Quill toolbar configuration
+  const quillModules = {
+    toolbar: [
+      [{ 'header': [1, 2, 3, false] }],
+      ['bold', 'italic', 'strike'],
+      [{ 'color': colorPalette }, { 'background': colorPalette }],
+      ['link', 'code', 'code-block'],
+      [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+      ['blockquote'],
+      [{ 'script': 'sub' }, { 'script': 'super' }],
+      [{ 'align': [] }],
+      ['clean'],
+    ],
+  };
+
+  const quillFormats = [
+    'header',
+    'bold',
+    'italic',
+    'strike',
+    'color',
+    'background',
+    'link',
+    'code',
+    'code-block',
+    'list',
+    'bullet',
+    'blockquote',
+    'script',
+    'align',
+  ];
 
   useEffect(() => {
     fetchNotes();
@@ -41,7 +86,6 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
       if (!response.ok) throw new Error('Failed to fetch notes');
       const data = await response.json();
       setNotes(data);
-      // Load favorites from localStorage or backend if implemented
       const storedFavorites = JSON.parse(localStorage.getItem('favorites')) || [];
       setFavorites(storedFavorites);
     } catch (err) {
@@ -89,7 +133,7 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
     setTitle(note.title);
     setContent(note.content);
     setTags(note.tags || []);
-    setCategory('Select Category');
+    setCurrentView('write');
   };
 
   const handleDeleteNote = async (id) => {
@@ -107,7 +151,6 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
 
       if (!response.ok) throw new Error('Failed to delete note');
 
-      // Remove from favorites if it was favorited
       setFavorites(favorites.filter((favId) => favId !== id));
       localStorage.setItem('favorites', JSON.stringify(favorites.filter((favId) => favId !== id)));
       await fetchNotes();
@@ -129,10 +172,23 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
     localStorage.setItem('favorites', JSON.stringify(updatedFavorites));
   };
 
-  const addTag = () => {
-    if (newTag && !tags.includes(newTag)) {
-      setTags([...tags, newTag]);
-      setNewTag('');
+  const toggleCurrentNoteFavorite = () => {
+    if (!editingNoteId) return; // Only toggle if editing an existing note
+    toggleFavorite(editingNoteId);
+  };
+
+  const handleTagInputChange = (e) => {
+    setTagInput(e.target.value);
+  };
+
+  const handleTagInputKeyPress = (e) => {
+    if (e.key === 'Enter' || e.key === ',' || e.key === ' ') {
+      e.preventDefault();
+      const newTag = tagInput.trim();
+      if (newTag && !tags.includes(newTag)) {
+        setTags([...tags, newTag]);
+      }
+      setTagInput('');
     }
   };
 
@@ -145,24 +201,79 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
     setTitle('');
     setContent('');
     setTags([]);
-    setCategory('Select Category');
+    setTagInput('');
     setError('');
+    setCurrentView('write');
+    setIsSpeaking(false);
+    window.speechSynthesis.cancel(); // Stop any ongoing speech
   };
 
-  const displayedNotes = currentView === 'favorites' ? notes.filter((note) => favorites.includes(note.id)) : notes;
+  // Text-to-Speech functionality
+  const handleSpeak = () => {
+    if (isSpeaking) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+      return;
+    }
+
+    if (!content) {
+      setError('No content to read aloud.');
+      return;
+    }
+
+    // Extract plain text from HTML content
+    const div = document.createElement('div');
+    div.innerHTML = DOMPurify.sanitize(content);
+    const plainText = div.innerText || div.textContent;
+
+    if (!plainText.trim()) {
+      setError('No readable content found.');
+      return;
+    }
+
+    const utterance = new SpeechSynthesisUtterance(plainText);
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => setIsSpeaking(false);
+    window.speechSynthesis.speak(utterance);
+    setIsSpeaking(true);
+  };
+
+  // Get all unique tags from notes
+  const allTags = [...new Set(notes.flatMap((note) => note.tags || []))];
+
+  // Filter notes based on the current view and selected tag
+  let displayedNotes = notes;
+  if (currentView === 'favorites') {
+    displayedNotes = notes.filter((note) => favorites.includes(note.id));
+  }
+  if (selectedTag) {
+    displayedNotes = displayedNotes.filter((note) => (note.tags || []).includes(selectedTag));
+  }
 
   return (
     <div className="app-content">
       <div className="d-flex flex-grow-1">
         <Nav className="flex-column sidebar p-3" style={{ minHeight: 'calc(100vh - 56px)' }}>
-          <Nav.Link as={Link} to="/app" className="active sidebar-item" style={{ background: 'linear-gradient(45deg, #007bff, #0056b3)' }}>
+          <Nav.Link
+            as={Link}
+            to="/app"
+            className={`sidebar-item ${currentView === 'write' ? 'active' : ''}`}
+            style={currentView === 'write' ? { background: 'linear-gradient(45deg, #007bff, #0056b3)' } : {}}
+            onClick={() => {
+              setCurrentView('write');
+              setSelectedTag(null);
+            }}
+          >
             Write Note
           </Nav.Link>
           <Nav.Link
             as={Link}
             to="/app"
             className={`sidebar-item ${currentView === 'all' ? 'active' : ''}`}
-            onClick={() => setCurrentView('all')}
+            onClick={() => {
+              setCurrentView('all');
+              setSelectedTag(null);
+            }}
           >
             All Notes <span className="badge badge-light">{notes.length}</span>
           </Nav.Link>
@@ -170,35 +281,33 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
             as={Link}
             to="/app"
             className={`sidebar-item ${currentView === 'favorites' ? 'active' : ''}`}
-            onClick={() => setCurrentView('favorites')}
+            onClick={() => {
+              setCurrentView('favorites');
+              setSelectedTag(null);
+            }}
           >
             Favorites <span className="badge badge-light">{favorites.length}</span>
           </Nav.Link>
           <Nav.Link href="#recent" className="sidebar-item text-success">Recent</Nav.Link>
           <Nav.Link href="#referenced" className="sidebar-item text-danger">Referenced</Nav.Link>
-          <Dropdown>
-            <Dropdown.Toggle variant="dark" id="dropdown-tags" className="w-100 text-left sidebar-item">
-              Tags
-            </Dropdown.Toggle>
-            <Dropdown.Menu className="bg-dark text-white">
-              <div className="p-2">
-                <FormControl
-                  type="text"
-                  placeholder="Add new tag..."
-                  value={newTag}
-                  onChange={(e) => setNewTag(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && addTag()}
-                  className="mb-2"
-                />
-                <Button variant="primary" size="sm" onClick={addTag}>+</Button>
-              </div>
-              {['Work', 'Personal', 'Ideas', 'Important', 'Web Development', 'Databases', 'Mobile', 'Programming'].map((tag) => (
-                <Dropdown.Item key={tag} className="text-white">
-                  {tag} <span className="text-danger">×</span>
-                </Dropdown.Item>
-              ))}
-            </Dropdown.Menu>
-          </Dropdown>
+          <div className="tags-section">
+            <h6 className="sidebar-item">Tags</h6>
+            {allTags.length === 0 && <p className="text-muted small pl-3">No tags available.</p>}
+            {allTags.map((tag) => (
+              <Nav.Link
+                key={tag}
+                as={Link}
+                to="/app"
+                className={`sidebar-item small ${selectedTag === tag ? 'active' : ''}`}
+                onClick={() => {
+                  setSelectedTag(tag);
+                  setCurrentView('all');
+                }}
+              >
+                {tag}
+              </Nav.Link>
+            ))}
+          </div>
           <Nav.Link href="#export" className="sidebar-item text-purple">
             <FontAwesomeIcon icon={faFileExport} className="mr-2" /> Export Notes
           </Nav.Link>
@@ -215,93 +324,104 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
           <Routes>
             <Route path="/app" element={
               <>
-                <div className="note-editor card p-3 shadow-lg mb-3">
-                  <input
-                    type="text"
-                    placeholder="Note title"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    className="note-title"
-                  />
-                  <div className="editor-options mt-2">
-                    <DropdownButton variant="secondary" title="Normal" size="sm" className="mr-2">
-                      <Dropdown.Item>Normal</Dropdown.Item>
-                      <Dropdown.Item>Heading</Dropdown.Item>
-                    </DropdownButton>
-                    <DropdownButton variant="secondary" title="White" size="sm" className="mr-2">
-                      <Dropdown.Item>White</Dropdown.Item>
-                      <Dropdown.Item>Dark</Dropdown.Item>
-                    </DropdownButton>
-                    <Button variant="light" size="sm" className="mr-1">B</Button>
-                    <Button variant="light" size="sm" className="mr-1">I</Button>
-                    <Button variant="light" size="sm" className="mr-1">U</Button>
-                    <Button variant="light" size="sm"><span role="img" aria-label="link">🔗</span></Button>
-                  </div>
-                  <textarea
-                    placeholder="Write your note here..."
-                    value={content}
-                    onChange={(e) => setContent(e.target.value)}
-                    className="note-content mt-2"
-                  />
-                  {error && <Alert variant="danger" className="mt-2">{error}</Alert>}
-                  <div className="d-flex justify-content-between align-items-center mt-2">
-                    <div>
-                      {tags.map((tag) => (
-                        <span key={tag} className="badge badge-secondary mr-1">
-                          {tag} <span className="ml-1 text-danger" onClick={() => removeTag(tag)}>×</span>
-                        </span>
-                      ))}
-                    </div>
-                    <div>
-                      <DropdownButton variant="secondary" title={category} size="sm" className="mr-2">
-                        {['Work', 'Personal', 'Ideas', 'Important', 'Web Development', 'Databases', 'Mobile', 'Programming'].map((cat) => (
-                          <Dropdown.Item key={cat} onClick={() => setCategory(cat)}>{cat}</Dropdown.Item>
-                        ))}
-                      </DropdownButton>
+                {currentView === 'write' ? (
+                  <div className="note-editor card p-3 shadow-lg mb-3">
+                    <input
+                      type="text"
+                      placeholder="Note title"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      className="note-title"
+                    />
+                    <ReactQuill
+                      value={content}
+                      onChange={setContent}
+                      modules={quillModules}
+                      formats={quillFormats}
+                      className="note-content mt-2"
+                      placeholder="Write your note here..."
+                    />
+                    {error && <Alert variant="danger" className="mt-2">{error}</Alert>}
+                    <div className="action-bar mt-2 d-flex align-items-center">
+                      <div className="tags-input-container flex-grow-1 mr-2">
+                        <div className="d-flex flex-wrap mb-1">
+                          {tags.map((tag) => (
+                            <span key={tag} className="badge badge-secondary mr-1 mb-1">
+                              {tag} <span className="ml-1 text-danger" onClick={() => removeTag(tag)}>×</span>
+                            </span>
+                          ))}
+                        </div>
+                        <FormControl
+                          type="text"
+                          placeholder="Add tags (separate with commas or spaces)..."
+                          value={tagInput}
+                          onChange={handleTagInputChange}
+                          onKeyPress={handleTagInputKeyPress}
+                          className="tag-input"
+                        />
+                      </div>
+                      <Button
+                        variant={isSpeaking ? "outline-danger" : "outline-primary"}
+                        size="sm"
+                        className="mr-2"
+                        onClick={handleSpeak}
+                        disabled={!content}
+                      >
+                        <FontAwesomeIcon icon={isSpeaking ? faStop : faVolumeUp} />
+                      </Button>
+                      <Button
+                        variant="outline-warning"
+                        size="sm"
+                        className="mr-2"
+                        onClick={toggleCurrentNoteFavorite}
+                        disabled={!editingNoteId}
+                      >
+                        <FontAwesomeIcon icon={editingNoteId && favorites.includes(editingNoteId) ? faStarSolid : faStarRegular} />
+                      </Button>
                       <Button variant="primary" onClick={handleSaveNote} className="save-button" disabled={loading}>
                         {loading ? <Spinner animation="border" size="sm" /> : <FontAwesomeIcon icon={faSave} className="mr-2" />}
                         {editingNoteId ? 'Update Note' : 'Save Note'}
                       </Button>
                     </div>
                   </div>
-                </div>
-
-                <div className="notes-list">
-                  <h3>{currentView === 'favorites' ? 'Favorite Notes' : 'All Notes'}</h3>
-                  {loading && <Spinner animation="border" />}
-                  {!loading && displayedNotes.length === 0 && <p>No notes available.</p>}
-                  {displayedNotes.map((note) => (
-                    <div key={note.id} className="note-item card p-2 mb-2 shadow-sm">
-                      <div className="d-flex justify-content-between">
-                        <div>
-                          <h5>{note.title}</h5>
-                          <p>{note.content}</p>
+                ) : (
+                  <div className="notes-list">
+                    <h3>{currentView === 'favorites' ? 'Favorite Notes' : selectedTag ? `Notes tagged with "${selectedTag}"` : 'All Notes'}</h3>
+                    {loading && <Spinner animation="border" />}
+                    {!loading && displayedNotes.length === 0 && <p>No notes available.</p>}
+                    {displayedNotes.map((note) => (
+                      <div key={note.id} className="note-item card p-2 mb-2 shadow-sm">
+                        <div className="d-flex justify-content-between">
                           <div>
-                            {note.tags.map((tag) => (
-                              <span key={tag} className="badge badge-secondary mr-1">{tag}</span>
-                            ))}
+                            <h5>{note.title}</h5>
+                            <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(note.content) }} />
+                            <div>
+                              {note.tags && note.tags.map((tag) => (
+                                <span key={tag} className="badge badge-secondary mr-1">{tag}</span>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="d-flex align-items-center">
+                            <Button
+                              variant="outline-warning"
+                              size="sm"
+                              className="mr-1"
+                              onClick={() => toggleFavorite(note.id)}
+                            >
+                              <FontAwesomeIcon icon={favorites.includes(note.id) ? faStarSolid : faStarRegular} />
+                            </Button>
+                            <Button variant="outline-primary" size="sm" className="mr-1" onClick={() => handleEditNote(note)}>
+                              <FontAwesomeIcon icon={faEdit} />
+                            </Button>
+                            <Button variant="outline-danger" size="sm" onClick={() => handleDeleteNote(note.id)}>
+                              <FontAwesomeIcon icon={faTrash} />
+                            </Button>
                           </div>
                         </div>
-                        <div className="d-flex align-items-center">
-                          <Button
-                            variant="outline-warning"
-                            size="sm"
-                            className="mr-1"
-                            onClick={() => toggleFavorite(note.id)}
-                          >
-                            <FontAwesomeIcon icon={favorites.includes(note.id) ? faStarSolid : faStarRegular} />
-                          </Button>
-                          <Button variant="outline-primary" size="sm" className="mr-1" onClick={() => handleEditNote(note)}>
-                            <FontAwesomeIcon icon={faEdit} />
-                          </Button>
-                          <Button variant="outline-danger" size="sm" onClick={() => handleDeleteNote(note.id)}>
-                            <FontAwesomeIcon icon={faTrash} />
-                          </Button>
-                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </>
             } />
             <Route path="/profile" element={<ProfilePage onLogout={onLogout} toggleTheme={toggleTheme} theme={theme} />} />
@@ -316,7 +436,7 @@ const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('token'));
   const [showSplash, setShowSplash] = useState(true);
   const [theme, setTheme] = useState('light');
-  const [pomodoroTime, setPomodoroTime] = useState(25 * 60); // 25 minutes in seconds
+  const [pomodoroTime, setPomodoroTime] = useState(25 * 60);
   const [timerRunning, setTimerRunning] = useState(false);
   const [customMinutes, setCustomMinutes] = useState(25);
 
@@ -365,10 +485,13 @@ const App = () => {
   const formatTime = (seconds) => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
-    return `${minutes} min ${remainingSeconds.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
   const startPauseTimer = () => {
+    if (!timerRunning) {
+      setPomodoroTime(customMinutes * 60);
+    }
     setTimerRunning(!timerRunning);
   };
 
@@ -378,14 +501,20 @@ const App = () => {
   };
 
   const incrementMinutes = () => {
-    setCustomMinutes((prev) => prev + 1);
-    setPomodoroTime((prev) => prev + 60);
+    setCustomMinutes((prev) => {
+      const newMinutes = prev + 1;
+      setPomodoroTime(newMinutes * 60);
+      return newMinutes;
+    });
     setTimerRunning(false);
   };
 
   const decrementMinutes = () => {
-    setCustomMinutes((prev) => Math.max(1, prev - 1));
-    setPomodoroTime((prev) => Math.max(60, prev - 60));
+    setCustomMinutes((prev) => {
+      const newMinutes = Math.max(1, prev - 1);
+      setPomodoroTime(newMinutes * 60);
+      return newMinutes;
+    });
     setTimerRunning(false);
   };
 

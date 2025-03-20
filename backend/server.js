@@ -276,7 +276,10 @@ app.delete('/delete-account', authenticateToken, async (req, res) => {
 
 app.get('/notes', authenticateToken, async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM notes ORDER BY created_at DESC');
+    const result = await pool.query(
+      'SELECT * FROM notes WHERE user_id = $1 ORDER BY updated_at DESC',
+      [req.user.id]
+    );
     res.status(200).json(result.rows);
   } catch (err) {
     console.error('Error fetching notes:', err);
@@ -288,9 +291,10 @@ app.post('/notes', authenticateToken, async (req, res) => {
   try {
     const { title, content, tags } = req.body;
     if (!title || !content) return res.status(400).json({ error: 'Title and content required' });
+
     const result = await pool.query(
-      'INSERT INTO notes (title, content, tags) VALUES ($1, $2, $3) RETURNING *',
-      [title, content, tags || []]
+      'INSERT INTO notes (user_id, title, content, tags, created_at, updated_at) VALUES ($1, $2, $3, $4, NOW(), NOW()) RETURNING *',
+      [req.user.id, title, content, tags || []]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
@@ -304,11 +308,12 @@ app.put('/notes/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
     const { title, content, tags } = req.body;
     if (!title || !content) return res.status(400).json({ error: 'Title and content required' });
+
     const result = await pool.query(
-      'UPDATE notes SET title=$1, content=$2, tags=$3, updated_at=NOW() WHERE id=$4 RETURNING *',
-      [title, content, tags || [], id]
+      'UPDATE notes SET title = $1, content = $2, tags = $3, updated_at = NOW() WHERE id = $4 AND user_id = $5 RETURNING *',
+      [title, content, tags || [], id, req.user.id]
     );
-    if (result.rows.length === 0) return res.status(404).json({ error: 'Note not found' });
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Note not found or you do not have permission to update it' });
     res.status(200).json(result.rows[0]);
   } catch (err) {
     console.error('Error updating note:', err);
@@ -319,8 +324,11 @@ app.put('/notes/:id', authenticateToken, async (req, res) => {
 app.delete('/notes/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const result = await pool.query('DELETE FROM notes WHERE id=$1 RETURNING *', [id]);
-    if (result.rows.length === 0) return res.status(404).json({ error: 'Note not found' });
+    const result = await pool.query(
+      'DELETE FROM notes WHERE id = $1 AND user_id = $2 RETURNING *',
+      [id, req.user.id]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Note not found or you do not have permission to delete it' });
     res.status(204).send();
   } catch (err) {
     console.error('Error deleting note:', err);

@@ -19,10 +19,34 @@ body[data-theme="dark"] .note-item {
   color: #f8f9fa;
 }
 
-body[data-theme="dark"] .note-title,
-body[data-theme="dark"] .note-content {
+body[data-theme="dark"] .note-title {
   background-color: #495057;
   color: #f8f9fa;
+}
+
+body[data-theme="dark"] .ql-container,
+body[data-theme="dark"] .ql-editor {
+  background-color: #495057;
+  color: #f8f9fa;
+}
+
+body[data-theme="dark"] .ql-toolbar {
+  background-color: #343a40;
+  border-color: #6c757d;
+}
+
+body[data-theme="dark"] .ql-picker-label,
+body[data-theme="dark"] .ql-picker-item {
+  color: #f8f9fa;
+}
+
+body[data-theme="dark"] .ql-picker-options {
+  background-color: #343a40;
+  border-color: #6c757d;
+}
+
+body[data-theme="dark"] .ql-editor::placeholder {
+  color: #adb5bd;
 }
 
 body[data-theme="dark"] .sidebar {
@@ -56,6 +80,61 @@ body[data-theme="dark"] .invalid-feedback {
   color: #ff6b6b;
 }
 
+/* Style the color picker swatches */
+.ql-color-picker .ql-picker-item {
+  width: 20px;
+  height: 20px;
+  margin: 2px;
+  border: 1px solid #ccc;
+}
+
+body[data-theme="dark"] .ql-color-picker .ql-picker-item {
+  border-color: #6c757d;
+}
+
+/* Style the action bar */
+.action-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Style the tags input */
+.tags-input-container {
+  margin-top: 10px;
+}
+
+.tag-input {
+  border-radius: 5px;
+  padding: 5px;
+  font-size: 0.9rem;
+}
+
+body[data-theme="dark"] .tag-input {
+  background-color: #495057;
+  color: #f8f9fa;
+  border-color: #6c757d;
+}
+
+body[data-theme="dark"] .tag-input::placeholder {
+  color: #adb5bd;
+}
+
+/* Style the tags section in the sidebar */
+.tags-section {
+  margin-bottom: 1rem;
+}
+
+.tags-section h6 {
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+}
+
+.tags-section .sidebar-item {
+  padding: 0.3rem 1rem;
+  font-size: 0.85rem;
+}
+
 .app {
   display: flex;
   flex-direction: column;
@@ -83,7 +162,7 @@ body[data-theme="dark"] .invalid-feedback {
 }
 
 .app-title-container {
-  width: 200px; /* Matches the sidebar width */
+  width: 200px;
   display: flex;
   justify-content: center;
 }
@@ -98,7 +177,7 @@ body[data-theme="dark"] .invalid-feedback {
   flex: 1;
   display: flex;
   justify-content: flex-start;
-  padding-left: 1rem; /* Matches the padding of the note-editor-container */
+  padding-left: 1rem;
 }
 
 .search-form {
@@ -219,10 +298,12 @@ body[data-theme="dark"] .invalid-feedback {
 
 .note-content {
   width: 100%;
-  border: none;
   min-height: 150px;
   padding: 8px;
-  resize: vertical;
+}
+
+.note-content .ql-editor {
+  min-height: 150px;
 }
 
 .note-item {
