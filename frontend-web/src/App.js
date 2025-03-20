@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate, Link } from 'react-router-dom';
 import { Navbar, Nav, Form, FormControl, Button, Alert, Spinner } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSave, faEdit, faTrash, faUser, faFileExport, faCloud, faSearch, faPlay, faPause, faRedo, faStar as faStarSolid, faVolumeUp, faStop, faSignOutAlt, faChevronDown, faChevronRight } from '@fortawesome/free-solid-svg-icons';
+import { faSave, faEdit, faTrash, faUser, faFileExport, faCloud, faSearch, faPlay, faPause, faRedo, faStar as faStarSolid, faVolumeUp, faStop, faSignOutAlt, faChevronDown, faChevronRight, faPen, faStickyNote, faStar, faClock } from '@fortawesome/free-solid-svg-icons';
 import { faStar as faStarRegular } from '@fortawesome/free-regular-svg-icons';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
@@ -91,7 +91,12 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
       }
 
       const data = await response.json();
-      setNotes(data);
+      // Convert all tags to uppercase when fetching notes
+      const updatedData = data.map(note => ({
+        ...note,
+        tags: note.tags ? note.tags.map(tag => tag.toUpperCase()) : [],
+      }));
+      setNotes(updatedData);
       const storedFavorites = JSON.parse(localStorage.getItem('favorites')) || [];
       setFavorites(storedFavorites);
     } catch (err) {
@@ -116,13 +121,15 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
 
       const method = editingNoteId ? 'PUT' : 'POST';
       const url = editingNoteId ? `http://localhost:5000/notes/${editingNoteId}` : 'http://localhost:5000/notes';
+      // Ensure tags are saved in uppercase
+      const uppercaseTags = tags.map(tag => tag.toUpperCase());
       const response = await fetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ title, content, tags }),
+        body: JSON.stringify({ title, content, tags: uppercaseTags }),
       });
 
       if (!response.ok) {
@@ -143,6 +150,7 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
     setEditingNoteId(note.id);
     setTitle(note.title);
     setContent(note.content);
+    // Tags are already uppercase from fetchNotes
     setTags(note.tags || []);
     setCurrentView('write');
   };
@@ -194,7 +202,8 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
   };
 
   const handleTagInputChange = (e) => {
-    setTagInput(e.target.value);
+    // Convert input to uppercase as the user types
+    setTagInput(e.target.value.toUpperCase());
   };
 
   const handleTagInputKeyPress = (e) => {
@@ -202,7 +211,8 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
       e.preventDefault();
       const newTag = tagInput.trim();
       if (newTag && !tags.includes(newTag)) {
-        setTags([...tags, newTag]);
+        // Add the tag in uppercase
+        setTags([...tags, newTag.toUpperCase()]);
       }
       setTagInput('');
     }
@@ -262,6 +272,7 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
     setSpeakingNoteId(noteId);
   };
 
+  // Convert tags to uppercase for the sidebar
   const allTags = [...new Set(notes.flatMap((note) => note.tags || []))];
 
   let displayedNotes = notes;
@@ -302,7 +313,7 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
               setSelectedTag(null);
             }}
           >
-            Write Note
+            <FontAwesomeIcon icon={faPen} className="mr-2" /> Write Note
           </Nav.Link>
           <Nav.Link
             as={Link}
@@ -313,31 +324,31 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
               setSelectedTag(null);
             }}
           >
-            All Notes <span className="badge badge-light">{notes.length}</span>
+            <FontAwesomeIcon icon={faStickyNote} className="mr-2" /> All Notes <span className="badge badge-light">{notes.length}</span>
           </Nav.Link>
           <Nav.Link
             as={Link}
             to="/app"
-            className={`sidebar-item ${currentView === 'favorites' ? 'active' : ''}`} // Removed text-danger
+            className={`sidebar-item ${currentView === 'favorites' ? 'active' : ''}`}
             onClick={() => {
               setCurrentView('favorites');
               setSelectedTag(null);
             }}
           >
-            Favorites <span className="badge badge-light">{favorites.length}</span>
+            <FontAwesomeIcon icon={faStar} className="mr-2" /> Favorites <span className="badge badge-light">{favorites.length}</span>
           </Nav.Link>
           <Nav.Link
             as={Link}
             to="/app"
-            className={`sidebar-item ${currentView === 'recent' ? 'active' : ''}`} // Removed text-danger
+            className={`sidebar-item ${currentView === 'recent' ? 'active' : ''}`}
             onClick={() => {
               setCurrentView('recent');
               setSelectedTag(null);
             }}
           >
-            Recent
+            <FontAwesomeIcon icon={faClock} className="mr-2" /> Recent
           </Nav.Link>
-          <Nav.Link href="#referenced" className="sidebar-item">Referenced</Nav.Link> {/* Removed text-danger */}
+          <Nav.Link href="#referenced" className="sidebar-item">Referenced</Nav.Link>
           <div className="tags-section">
             <h6 className="sidebar-item tags-header" onClick={toggleTagsSection}>
               Tags
@@ -372,7 +383,7 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
           <Nav.Link href="#nextcloud" className="sidebar-item text-purple">
             <FontAwesomeIcon icon={faCloud} className="mr-2" /> NextCloud Sync
           </Nav.Link>
-          <Nav.Link onClick={onLogout} className="sidebar-item mt-auto"> {/* Removed text-danger */}
+          <Nav.Link onClick={onLogout} className="sidebar-item mt-auto">
             <FontAwesomeIcon icon={faSignOutAlt} className="mr-2" /> Log Out
           </Nav.Link>
           <Nav.Link as={Link} to="/profile" className="sidebar-item">
@@ -720,4 +731,4 @@ const App = () => {
   );
 };
 
-export default App; 
+export default App;
