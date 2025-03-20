@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate, Link } from 'react-router-dom';
 import { Navbar, Nav, Form, FormControl, Button, Alert, Spinner } from 'react-bootstrap';
@@ -28,7 +27,7 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
   const [editingNoteId, setEditingNoteId] = useState(null);
   const [currentView, setCurrentView] = useState('write');
   const [selectedTag, setSelectedTag] = useState(null);
-  const [isSpeaking, setIsSpeaking] = useState(false); // Track if speech is active
+  const [isSpeaking, setIsSpeaking] = useState(false);
 
   // Define the color palette based on the 5x4 grid
   const colorPalette = [
@@ -78,12 +77,19 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
+      if (!token) throw new Error('No authentication token found. Please log in again.');
+
       const response = await fetch('http://localhost:5000/notes', {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
       });
-      if (!response.ok) throw new Error('Failed to fetch notes');
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to fetch notes');
+      }
+
       const data = await response.json();
       setNotes(data);
       const storedFavorites = JSON.parse(localStorage.getItem('favorites')) || [];
@@ -106,6 +112,8 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
 
     try {
       const token = localStorage.getItem('token');
+      if (!token) throw new Error('No authentication token found. Please log in again.');
+
       const method = editingNoteId ? 'PUT' : 'POST';
       const url = editingNoteId ? `http://localhost:5000/notes/${editingNoteId}` : 'http://localhost:5000/notes';
       const response = await fetch(url, {
@@ -117,7 +125,10 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
         body: JSON.stringify({ title, content, tags }),
       });
 
-      if (!response.ok) throw new Error(editingNoteId ? 'Failed to update note' : 'Failed to create note');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || (editingNoteId ? 'Failed to update note' : 'Failed to create note'));
+      }
 
       await fetchNotes();
       resetForm();
@@ -142,6 +153,8 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
+      if (!token) throw new Error('No authentication token found. Please log in again.');
+
       const response = await fetch(`http://localhost:5000/notes/${id}`, {
         method: 'DELETE',
         headers: {
@@ -149,7 +162,10 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
         },
       });
 
-      if (!response.ok) throw new Error('Failed to delete note');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete note');
+      }
 
       setFavorites(favorites.filter((favId) => favId !== id));
       localStorage.setItem('favorites', JSON.stringify(favorites.filter((favId) => favId !== id)));
@@ -173,7 +189,7 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
   };
 
   const toggleCurrentNoteFavorite = () => {
-    if (!editingNoteId) return; // Only toggle if editing an existing note
+    if (!editingNoteId) return;
     toggleFavorite(editingNoteId);
   };
 
@@ -205,10 +221,9 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
     setError('');
     setCurrentView('write');
     setIsSpeaking(false);
-    window.speechSynthesis.cancel(); // Stop any ongoing speech
+    window.speechSynthesis.cancel();
   };
 
-  // Text-to-Speech functionality
   const handleSpeak = () => {
     if (isSpeaking) {
       window.speechSynthesis.cancel();
@@ -221,7 +236,6 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
       return;
     }
 
-    // Extract plain text from HTML content
     const div = document.createElement('div');
     div.innerHTML = DOMPurify.sanitize(content);
     const plainText = div.innerText || div.textContent;
@@ -245,6 +259,8 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
   let displayedNotes = notes;
   if (currentView === 'favorites') {
     displayedNotes = notes.filter((note) => favorites.includes(note.id));
+  } else if (currentView === 'recent') {
+    displayedNotes = [...notes].sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
   }
   if (selectedTag) {
     displayedNotes = displayedNotes.filter((note) => (note.tags || []).includes(selectedTag));
@@ -288,7 +304,17 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
           >
             Favorites <span className="badge badge-light">{favorites.length}</span>
           </Nav.Link>
-          <Nav.Link href="#recent" className="sidebar-item text-success">Recent</Nav.Link>
+          <Nav.Link
+            as={Link}
+            to="/app"
+            className={`sidebar-item text-success ${currentView === 'recent' ? 'active' : ''}`}
+            onClick={() => {
+              setCurrentView('recent');
+              setSelectedTag(null);
+            }}
+          >
+            Recent
+          </Nav.Link>
           <Nav.Link href="#referenced" className="sidebar-item text-danger">Referenced</Nav.Link>
           <div className="tags-section">
             <h6 className="sidebar-item">Tags</h6>
@@ -386,7 +412,9 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
                   </div>
                 ) : (
                   <div className="notes-list">
-                    <h3>{currentView === 'favorites' ? 'Favorite Notes' : selectedTag ? `Notes tagged with "${selectedTag}"` : 'All Notes'}</h3>
+                    <h3>
+                      {currentView === 'favorites' ? 'Favorite Notes' : currentView === 'recent' ? 'Recent Notes' : selectedTag ? `Notes tagged with "${selectedTag}"` : 'All Notes'}
+                    </h3>
                     {loading && <Spinner animation="border" />}
                     {!loading && displayedNotes.length === 0 && <p>No notes available.</p>}
                     {displayedNotes.map((note) => (
@@ -400,6 +428,9 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
                                 <span key={tag} className="badge badge-secondary mr-1">{tag}</span>
                               ))}
                             </div>
+                            <small className="text-muted">
+                              Last updated: {new Date(note.updated_at).toLocaleString()}
+                            </small>
                           </div>
                           <div className="d-flex align-items-center">
                             <Button
