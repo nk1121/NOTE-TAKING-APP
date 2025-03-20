@@ -2,18 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate, Link } from 'react-router-dom';
 import { Navbar, Nav, Form, FormControl, Button, Dropdown, DropdownButton, Alert, Spinner } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSave, faEdit, faTrash, faUser, faCog, faSignOutAlt, faBell, faQuestionCircle, faInfoCircle, faLock, faTrashAlt, faBook, faFileExport, faCloud, faMoon, faFileContract } from '@fortawesome/free-solid-svg-icons';
+import { faSave, faEdit, faTrash, faUser, faFileExport, faCloud, faSearch, faPlay, faPause, faRedo, faStar as faStarSolid } from '@fortawesome/free-solid-svg-icons';
+import { faStar as faStarRegular } from '@fortawesome/free-regular-svg-icons';
 import SplashScreen from './components/SplashScreen';
 import LoginPage from './components/LoginPage';
 import RegisterPage from './components/RegisterPage';
 import ForgotPasswordPage from './components/ForgotPasswordPage';
 import ResetPasswordPage from './components/ResetPasswordPage';
 import ProfilePage from './components/ProfilePage';
-import ChangePasswordPage from './components/ChangePasswordPage';
 import './App.css';
 
-const MainApp = ({ onLogout }) => {
+const MainApp = ({ onLogout, toggleTheme, theme }) => {
   const [notes, setNotes] = useState([]);
+  const [favorites, setFavorites] = useState([]); // State to track favorite notes
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [category, setCategory] = useState('Select Category');
@@ -22,7 +23,7 @@ const MainApp = ({ onLogout }) => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [editingNoteId, setEditingNoteId] = useState(null);
-  const [theme, setTheme] = useState('light');
+  const [currentView, setCurrentView] = useState('all'); // State to track the current view (all or favorites)
 
   useEffect(() => {
     fetchNotes();
@@ -40,6 +41,9 @@ const MainApp = ({ onLogout }) => {
       if (!response.ok) throw new Error('Failed to fetch notes');
       const data = await response.json();
       setNotes(data);
+      // Load favorites from localStorage or backend if implemented
+      const storedFavorites = JSON.parse(localStorage.getItem('favorites')) || [];
+      setFavorites(storedFavorites);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -103,6 +107,9 @@ const MainApp = ({ onLogout }) => {
 
       if (!response.ok) throw new Error('Failed to delete note');
 
+      // Remove from favorites if it was favorited
+      setFavorites(favorites.filter((favId) => favId !== id));
+      localStorage.setItem('favorites', JSON.stringify(favorites.filter((favId) => favId !== id)));
       await fetchNotes();
     } catch (err) {
       setError(err.message);
@@ -111,31 +118,15 @@ const MainApp = ({ onLogout }) => {
     }
   };
 
-  const handleDeleteAccount = async () => {
-    if (!window.confirm('Are you sure you want to delete your account? This action cannot be undone.')) return;
-
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/delete-account', {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Failed to delete account');
-
-      onLogout();
-    } catch (err) {
-      setError(err.message);
+  const toggleFavorite = (id) => {
+    let updatedFavorites;
+    if (favorites.includes(id)) {
+      updatedFavorites = favorites.filter((favId) => favId !== id);
+    } else {
+      updatedFavorites = [...favorites, id];
     }
-  };
-
-  const toggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light';
-    setTheme(newTheme);
-    document.body.setAttribute('data-theme', newTheme);
+    setFavorites(updatedFavorites);
+    localStorage.setItem('favorites', JSON.stringify(updatedFavorites));
   };
 
   const addTag = () => {
@@ -158,32 +149,30 @@ const MainApp = ({ onLogout }) => {
     setError('');
   };
 
-  return (
-    <div className="app">
-      <Navbar bg="dark" variant="dark" expand="lg" className="justify-content-between shadow-sm">
-        <Navbar.Brand href="#home" className="d-flex align-items-center">
-          Note App
-        </Navbar.Brand>
-        <Form inline>
-          <FormControl type="text" placeholder="Search notes..." className="mr-sm-2 search-input" />
-          <Button variant="outline-light" className="mr-2" onClick={onLogout}>Sign out</Button>
-        </Form>
-        <div className="timer-controls">
-          <span className="timer">25:00</span>
-          <Button variant="outline-light" size="sm" className="ml-2">-</Button>
-          <Button variant="outline-light" size="sm" className="ml-1">+</Button>
-          <Button variant="outline-light" size="sm" className="ml-1">▶</Button>
-          <Button variant="outline-light" size="sm" className="ml-1">🔊</Button>
-        </div>
-      </Navbar>
+  const displayedNotes = currentView === 'favorites' ? notes.filter((note) => favorites.includes(note.id)) : notes;
 
+  return (
+    <div className="app-content">
       <div className="d-flex flex-grow-1">
         <Nav className="flex-column sidebar p-3" style={{ minHeight: 'calc(100vh - 56px)' }}>
           <Nav.Link as={Link} to="/app" className="active sidebar-item" style={{ background: 'linear-gradient(45deg, #007bff, #0056b3)' }}>
             Write Note
           </Nav.Link>
-          <Nav.Link as={Link} to="/app" className="sidebar-item">
+          <Nav.Link
+            as={Link}
+            to="/app"
+            className={`sidebar-item ${currentView === 'all' ? 'active' : ''}`}
+            onClick={() => setCurrentView('all')}
+          >
             All Notes <span className="badge badge-light">{notes.length}</span>
+          </Nav.Link>
+          <Nav.Link
+            as={Link}
+            to="/app"
+            className={`sidebar-item ${currentView === 'favorites' ? 'active' : ''}`}
+            onClick={() => setCurrentView('favorites')}
+          >
+            Favorites <span className="badge badge-light">{favorites.length}</span>
           </Nav.Link>
           <Nav.Link href="#recent" className="sidebar-item text-success">Recent</Nav.Link>
           <Nav.Link href="#referenced" className="sidebar-item text-danger">Referenced</Nav.Link>
@@ -216,70 +205,17 @@ const MainApp = ({ onLogout }) => {
           <Nav.Link href="#nextcloud" className="sidebar-item text-purple">
             <FontAwesomeIcon icon={faCloud} className="mr-2" /> NextCloud Sync
           </Nav.Link>
-          <div className="mt-auto">
-            <Dropdown drop="up">
-              <Dropdown.Toggle variant="dark" id="dropdown-user" className="w-100 text-left sidebar-item" aria-label="User Profile Menu">
-                <img src="https://via.placeholder.com/30" alt="User" className="rounded-circle mr-2" />
-                {localStorage.getItem('username') || 'Guest'}
-              </Dropdown.Toggle>
-              <Dropdown.Menu className="bg-dark text-white w-100">
-                <Dropdown.Header>Account Management</Dropdown.Header>
-                <Dropdown.Item as={Link} to="/profile" aria-label="View and edit profile">
-                  <FontAwesomeIcon icon={faUser} className="mr-2" /> Profile
-                </Dropdown.Item>
-                <Dropdown.Item as={Link} to="/change-password" aria-label="Change password">
-                  <FontAwesomeIcon icon={faLock} className="mr-2" /> Change Password
-                </Dropdown.Item>
-                <Dropdown.Item href="#account-settings" aria-label="Account settings">
-                  <FontAwesomeIcon icon={faCog} className="mr-2" /> Account Settings
-                </Dropdown.Item>
-                <Dropdown.Item onClick={onLogout} aria-label="Sign out">
-                  <FontAwesomeIcon icon={faSignOutAlt} className="mr-2" /> Sign Out
-                </Dropdown.Item>
-                <Dropdown.Item onClick={handleDeleteAccount} className="text-danger" aria-label="Delete account">
-                  <FontAwesomeIcon icon={faTrashAlt} className="mr-2" /> Delete Account
-                </Dropdown.Item>
-                <Dropdown.Divider />
-                <Dropdown.Header>App Options</Dropdown.Header>
-                <Dropdown.Item onClick={toggleTheme} aria-label="Toggle theme">
-                  <FontAwesomeIcon icon={faMoon} className="mr-2" /> {theme === 'light' ? 'Dark Mode' : 'Light Mode'}
-                </Dropdown.Item>
-                <Dropdown.Item href="#notifications" aria-label="View notifications">
-                  <FontAwesomeIcon icon={faBell} className="mr-2" /> Notifications
-                </Dropdown.Item>
-                <Dropdown.Item href="#settings" aria-label="App settings">
-                  <FontAwesomeIcon icon={faCog} className="mr-2" /> Settings
-                </Dropdown.Item>
-                <Dropdown.Item href="#help" aria-label="Help and support">
-                  <FontAwesomeIcon icon={faQuestionCircle} className="mr-2" /> Help/Support
-                </Dropdown.Item>
-                <Dropdown.Item href="#guides" aria-label="User guides and tutorials">
-                  <FontAwesomeIcon icon={faBook} className="mr-2" /> User Guides
-                </Dropdown.Item>
-                <Dropdown.Item href="#switch-accounts" aria-label="Switch accounts">
-                  <FontAwesomeIcon icon={faUser} className="mr-2" /> Switch Accounts
-                </Dropdown.Item>
-                <Dropdown.Divider />
-                <Dropdown.Header>Information</Dropdown.Header>
-                <Dropdown.Item href="#about" aria-label="About the app">
-                  <FontAwesomeIcon icon={faInfoCircle} className="mr-2" /> About
-                </Dropdown.Item>
-                <Dropdown.Item href="#privacy" aria-label="Privacy policy">
-                  <FontAwesomeIcon icon={faFileContract} className="mr-2" /> Privacy Policy
-                </Dropdown.Item>
-                <Dropdown.Item href="#terms" aria-label="Terms of service">
-                  <FontAwesomeIcon icon={faFileContract} className="mr-2" /> Terms of Service
-                </Dropdown.Item>
-              </Dropdown.Menu>
-            </Dropdown>
-          </div>
+          <Nav.Link as={Link} to="/profile" className="sidebar-item mt-auto">
+            <FontAwesomeIcon icon={faUser} className="mr-2" />
+            {localStorage.getItem('username') || 'Guest'}
+          </Nav.Link>
         </Nav>
 
-        <div className="flex-grow-1 p-4 note-editor-container">
+        <div className="flex-grow-1 note-editor-container">
           <Routes>
             <Route path="/app" element={
               <>
-                <div className="note-editor card p-4 shadow-lg mb-4">
+                <div className="note-editor card p-3 shadow-lg mb-3">
                   <input
                     type="text"
                     placeholder="Note title"
@@ -305,10 +241,10 @@ const MainApp = ({ onLogout }) => {
                     placeholder="Write your note here..."
                     value={content}
                     onChange={(e) => setContent(e.target.value)}
-                    className="note-content mt-3"
+                    className="note-content mt-2"
                   />
-                  {error && <Alert variant="danger" className="mt-3">{error}</Alert>}
-                  <div className="d-flex justify-content-between align-items-center mt-3">
+                  {error && <Alert variant="danger" className="mt-2">{error}</Alert>}
+                  <div className="d-flex justify-content-between align-items-center mt-2">
                     <div>
                       {tags.map((tag) => (
                         <span key={tag} className="badge badge-secondary mr-1">
@@ -331,11 +267,11 @@ const MainApp = ({ onLogout }) => {
                 </div>
 
                 <div className="notes-list">
-                  <h3>All Notes</h3>
+                  <h3>{currentView === 'favorites' ? 'Favorite Notes' : 'All Notes'}</h3>
                   {loading && <Spinner animation="border" />}
-                  {!loading && notes.length === 0 && <p>No notes available.</p>}
-                  {notes.map((note) => (
-                    <div key={note.id} className="note-item card p-3 mb-3 shadow-sm">
+                  {!loading && displayedNotes.length === 0 && <p>No notes available.</p>}
+                  {displayedNotes.map((note) => (
+                    <div key={note.id} className="note-item card p-2 mb-2 shadow-sm">
                       <div className="d-flex justify-content-between">
                         <div>
                           <h5>{note.title}</h5>
@@ -346,8 +282,16 @@ const MainApp = ({ onLogout }) => {
                             ))}
                           </div>
                         </div>
-                        <div>
-                          <Button variant="outline-primary" size="sm" className="mr-2" onClick={() => handleEditNote(note)}>
+                        <div className="d-flex align-items-center">
+                          <Button
+                            variant="outline-warning"
+                            size="sm"
+                            className="mr-1"
+                            onClick={() => toggleFavorite(note.id)}
+                          >
+                            <FontAwesomeIcon icon={favorites.includes(note.id) ? faStarSolid : faStarRegular} />
+                          </Button>
+                          <Button variant="outline-primary" size="sm" className="mr-1" onClick={() => handleEditNote(note)}>
                             <FontAwesomeIcon icon={faEdit} />
                           </Button>
                           <Button variant="outline-danger" size="sm" onClick={() => handleDeleteNote(note.id)}>
@@ -360,8 +304,7 @@ const MainApp = ({ onLogout }) => {
                 </div>
               </>
             } />
-            <Route path="/profile" element={<ProfilePage />} />
-            <Route path="/change-password" element={<ChangePasswordPage />} />
+            <Route path="/profile" element={<ProfilePage onLogout={onLogout} toggleTheme={toggleTheme} theme={theme} />} />
           </Routes>
         </div>
       </div>
@@ -372,13 +315,35 @@ const MainApp = ({ onLogout }) => {
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('token'));
   const [showSplash, setShowSplash] = useState(true);
+  const [theme, setTheme] = useState('light');
+  const [pomodoroTime, setPomodoroTime] = useState(25 * 60); // 25 minutes in seconds
+  const [timerRunning, setTimerRunning] = useState(false);
+  const [customMinutes, setCustomMinutes] = useState(25);
 
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowSplash(false);
     }, 3000);
+
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    setTheme(savedTheme);
+    document.body.setAttribute('data-theme', savedTheme);
+
     return () => clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    let interval;
+    if (timerRunning && pomodoroTime > 0) {
+      interval = setInterval(() => {
+        setPomodoroTime((prev) => prev - 1);
+      }, 1000);
+    } else if (pomodoroTime === 0) {
+      setTimerRunning(false);
+      console.log('Pomodoro timer finished!');
+    }
+    return () => clearInterval(interval);
+  }, [timerRunning, pomodoroTime]);
 
   const handleLogin = () => {
     setIsAuthenticated(true);
@@ -390,27 +355,121 @@ const App = () => {
     setIsAuthenticated(false);
   };
 
+  const toggleTheme = () => {
+    const newTheme = theme === 'light' ? 'dark' : 'light';
+    setTheme(newTheme);
+    localStorage.setItem('theme', newTheme);
+    document.body.setAttribute('data-theme', newTheme);
+  };
+
+  const formatTime = (seconds) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes} min ${remainingSeconds.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
+
+  const startPauseTimer = () => {
+    setTimerRunning(!timerRunning);
+  };
+
+  const resetTimer = () => {
+    setTimerRunning(false);
+    setPomodoroTime(customMinutes * 60);
+  };
+
+  const incrementMinutes = () => {
+    setCustomMinutes((prev) => prev + 1);
+    setPomodoroTime((prev) => prev + 60);
+    setTimerRunning(false);
+  };
+
+  const decrementMinutes = () => {
+    setCustomMinutes((prev) => Math.max(1, prev - 1));
+    setPomodoroTime((prev) => Math.max(60, prev - 60));
+    setTimerRunning(false);
+  };
+
   return (
     <Router>
-      <Routes>
-        <Route
-          path="/"
-          element={
-            showSplash ? (
-              <SplashScreen />
-            ) : !isAuthenticated ? (
-              <Navigate to="/login" />
-            ) : (
-              <Navigate to="/app" />
-            )
-          }
-        />
-        <Route path="/login" element={<LoginPage onLogin={handleLogin} />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="/reset-password" element={<ResetPasswordPage />} />
-        <Route path="/*" element={<MainApp onLogout={handleLogout} />} />
-      </Routes>
+      <div className="app">
+        {isAuthenticated && (
+          <Navbar bg="dark" variant="dark" expand="lg" className="shadow-sm">
+            <div className="navbar-content">
+              <div className="app-title-container">
+                <Navbar.Brand href="#home" className="app-title">
+                  NoteApp
+                </Navbar.Brand>
+              </div>
+              <div className="search-container-wrapper">
+                <Form inline className="search-form">
+                  <div className="search-container">
+                    <FontAwesomeIcon icon={faSearch} className="search-icon" />
+                    <FormControl
+                      type="text"
+                      placeholder="Search notes..."
+                      className="search-input"
+                    />
+                  </div>
+                </Form>
+              </div>
+              <div className="timer-controls">
+                <Button
+                  variant="outline-light"
+                  size="sm"
+                  className="timer-button"
+                  onClick={decrementMinutes}
+                >
+                  −
+                </Button>
+                <span className="timer">{formatTime(pomodoroTime)}</span>
+                <Button
+                  variant="outline-light"
+                  size="sm"
+                  className="timer-button"
+                  onClick={incrementMinutes}
+                >
+                  +
+                </Button>
+                <Button
+                  variant="outline-light"
+                  size="sm"
+                  className="timer-button"
+                  onClick={startPauseTimer}
+                >
+                  <FontAwesomeIcon icon={timerRunning ? faPause : faPlay} />
+                </Button>
+                <Button
+                  variant="outline-light"
+                  size="sm"
+                  className="timer-button"
+                  onClick={resetTimer}
+                >
+                  <FontAwesomeIcon icon={faRedo} />
+                </Button>
+              </div>
+            </div>
+          </Navbar>
+        )}
+        <Routes>
+          <Route
+            path="/"
+            element={
+              showSplash ? (
+                <SplashScreen />
+              ) : !isAuthenticated ? (
+                <Navigate to="/login" />
+              ) : (
+                <Navigate to="/app" />
+              )
+            }
+          />
+          <Route path="/login" element={<LoginPage onLogin={handleLogin} />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/*" element={<MainApp onLogout={handleLogout} toggleTheme={toggleTheme} theme={theme} />} />
+        </Routes>
+      </div>
     </Router>
   );
 };
