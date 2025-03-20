@@ -123,6 +123,7 @@ body[data-theme="dark"] .tag-input::placeholder {
 /* Style the tags section in the sidebar */
 .tags-section {
   margin-bottom: 1rem;
+  transition: all 0.3s ease; /* Smooth transition for expanding/collapsing */
 }
 
 .tags-section h6 {
@@ -133,6 +134,32 @@ body[data-theme="dark"] .tag-input::placeholder {
 .tags-section .sidebar-item {
   padding: 0.3rem 1rem;
   font-size: 0.85rem;
+}
+
+/* Change tag color to black */
+.badge-black {
+  background-color: #000 !important;
+  color: #fff !important;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+}
+
+/* Style for the tags section header */
+.tags-header {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.tags-header:hover {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+/* Ensure tags list has some padding when expanded */
+.tags-section .sidebar-item.small {
+  padding-left: 1.5rem;
 }
 
 .app {

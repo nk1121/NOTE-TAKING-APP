@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate, Link } from 'react-router-dom';
 import { Navbar, Nav, Form, FormControl, Button, Alert, Spinner } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSave, faEdit, faTrash, faUser, faFileExport, faCloud, faSearch, faPlay, faPause, faRedo, faStar as faStarSolid, faVolumeUp, faStop } from '@fortawesome/free-solid-svg-icons';
+import { faSave, faEdit, faTrash, faUser, faFileExport, faCloud, faSearch, faPlay, faPause, faRedo, faStar as faStarSolid, faVolumeUp, faStop, faSignOutAlt, faChevronDown, faChevronRight } from '@fortawesome/free-solid-svg-icons';
 import { faStar as faStarRegular } from '@fortawesome/free-regular-svg-icons';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
@@ -28,8 +28,9 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
   const [currentView, setCurrentView] = useState('write');
   const [selectedTag, setSelectedTag] = useState(null);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [speakingNoteId, setSpeakingNoteId] = useState(null);
+  const [isTagsExpanded, setIsTagsExpanded] = useState(true);
 
-  // Define the color palette based on the 5x4 grid
   const colorPalette = [
     '#D4EFDF', '#FFFFCC', '#FFD1DC', '#E6E6FA', '#E0F7FA',
     '#00FF00', '#FFFF00', '#FF0000', '#800080', '#0000FF',
@@ -37,7 +38,6 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
     '#FFFFFF', '#D3D3D3', '#808080', '#000000', '#2F4F4F',
   ];
 
-  // React Quill toolbar configuration
   const quillModules = {
     toolbar: [
       [{ 'header': [1, 2, 3, false] }],
@@ -221,13 +221,15 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
     setError('');
     setCurrentView('write');
     setIsSpeaking(false);
+    setSpeakingNoteId(null);
     window.speechSynthesis.cancel();
   };
 
-  const handleSpeak = () => {
-    if (isSpeaking) {
+  const handleSpeak = (content, noteId) => {
+    if (speakingNoteId === noteId && isSpeaking) {
       window.speechSynthesis.cancel();
       setIsSpeaking(false);
+      setSpeakingNoteId(null);
       return;
     }
 
@@ -245,17 +247,23 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
       return;
     }
 
+    window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(plainText);
-    utterance.onend = () => setIsSpeaking(false);
-    utterance.onerror = () => setIsSpeaking(false);
+    utterance.onend = () => {
+      setIsSpeaking(false);
+      setSpeakingNoteId(null);
+    };
+    utterance.onerror = () => {
+      setIsSpeaking(false);
+      setSpeakingNoteId(null);
+    };
     window.speechSynthesis.speak(utterance);
     setIsSpeaking(true);
+    setSpeakingNoteId(noteId);
   };
 
-  // Get all unique tags from notes
   const allTags = [...new Set(notes.flatMap((note) => note.tags || []))];
 
-  // Filter notes based on the current view and selected tag
   let displayedNotes = notes;
   if (currentView === 'favorites') {
     displayedNotes = notes.filter((note) => favorites.includes(note.id));
@@ -265,6 +273,20 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
   if (selectedTag) {
     displayedNotes = displayedNotes.filter((note) => (note.tags || []).includes(selectedTag));
   }
+
+  const truncateContent = (content) => {
+    const div = document.createElement('div');
+    div.innerHTML = DOMPurify.sanitize(content);
+    const plainText = div.innerText || div.textContent;
+    if (plainText.length > 20) {
+      return plainText.substring(0, 20) + '...';
+    }
+    return plainText;
+  };
+
+  const toggleTagsSection = () => {
+    setIsTagsExpanded(!isTagsExpanded);
+  };
 
   return (
     <div className="app-content">
@@ -296,7 +318,7 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
           <Nav.Link
             as={Link}
             to="/app"
-            className={`sidebar-item ${currentView === 'favorites' ? 'active' : ''}`}
+            className={`sidebar-item ${currentView === 'favorites' ? 'active' : ''}`} // Removed text-danger
             onClick={() => {
               setCurrentView('favorites');
               setSelectedTag(null);
@@ -307,7 +329,7 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
           <Nav.Link
             as={Link}
             to="/app"
-            className={`sidebar-item text-success ${currentView === 'recent' ? 'active' : ''}`}
+            className={`sidebar-item ${currentView === 'recent' ? 'active' : ''}`} // Removed text-danger
             onClick={() => {
               setCurrentView('recent');
               setSelectedTag(null);
@@ -315,24 +337,34 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
           >
             Recent
           </Nav.Link>
-          <Nav.Link href="#referenced" className="sidebar-item text-danger">Referenced</Nav.Link>
+          <Nav.Link href="#referenced" className="sidebar-item">Referenced</Nav.Link> {/* Removed text-danger */}
           <div className="tags-section">
-            <h6 className="sidebar-item">Tags</h6>
-            {allTags.length === 0 && <p className="text-muted small pl-3">No tags available.</p>}
-            {allTags.map((tag) => (
-              <Nav.Link
-                key={tag}
-                as={Link}
-                to="/app"
-                className={`sidebar-item small ${selectedTag === tag ? 'active' : ''}`}
-                onClick={() => {
-                  setSelectedTag(tag);
-                  setCurrentView('all');
-                }}
-              >
-                {tag}
-              </Nav.Link>
-            ))}
+            <h6 className="sidebar-item tags-header" onClick={toggleTagsSection}>
+              Tags
+              <FontAwesomeIcon
+                icon={isTagsExpanded ? faChevronDown : faChevronRight}
+                className="ml-2"
+              />
+            </h6>
+            {isTagsExpanded && (
+              <>
+                {allTags.length === 0 && <p className="text-muted small pl-3">No tags available.</p>}
+                {allTags.map((tag) => (
+                  <Nav.Link
+                    key={tag}
+                    as={Link}
+                    to="/app"
+                    className={`sidebar-item small ${selectedTag === tag ? 'active' : ''}`}
+                    onClick={() => {
+                      setSelectedTag(tag);
+                      setCurrentView('all');
+                    }}
+                  >
+                    {tag}
+                  </Nav.Link>
+                ))}
+              </>
+            )}
           </div>
           <Nav.Link href="#export" className="sidebar-item text-purple">
             <FontAwesomeIcon icon={faFileExport} className="mr-2" /> Export Notes
@@ -340,7 +372,10 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
           <Nav.Link href="#nextcloud" className="sidebar-item text-purple">
             <FontAwesomeIcon icon={faCloud} className="mr-2" /> NextCloud Sync
           </Nav.Link>
-          <Nav.Link as={Link} to="/profile" className="sidebar-item mt-auto">
+          <Nav.Link onClick={onLogout} className="sidebar-item mt-auto"> {/* Removed text-danger */}
+            <FontAwesomeIcon icon={faSignOutAlt} className="mr-2" /> Log Out
+          </Nav.Link>
+          <Nav.Link as={Link} to="/profile" className="sidebar-item">
             <FontAwesomeIcon icon={faUser} className="mr-2" />
             {localStorage.getItem('username') || 'Guest'}
           </Nav.Link>
@@ -372,7 +407,7 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
                       <div className="tags-input-container flex-grow-1 mr-2">
                         <div className="d-flex flex-wrap mb-1">
                           {tags.map((tag) => (
-                            <span key={tag} className="badge badge-secondary mr-1 mb-1">
+                            <span key={tag} className="badge badge-black mr-1 mb-1">
                               {tag} <span className="ml-1 text-danger" onClick={() => removeTag(tag)}>×</span>
                             </span>
                           ))}
@@ -387,13 +422,13 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
                         />
                       </div>
                       <Button
-                        variant={isSpeaking ? "outline-danger" : "outline-primary"}
+                        variant={isSpeaking && speakingNoteId === null ? "outline-danger" : "outline-primary"}
                         size="sm"
                         className="mr-2"
-                        onClick={handleSpeak}
+                        onClick={() => handleSpeak(content, null)}
                         disabled={!content}
                       >
-                        <FontAwesomeIcon icon={isSpeaking ? faStop : faVolumeUp} />
+                        <FontAwesomeIcon icon={isSpeaking && speakingNoteId === null ? faStop : faVolumeUp} />
                       </Button>
                       <Button
                         variant="outline-warning"
@@ -422,10 +457,10 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
                         <div className="d-flex justify-content-between">
                           <div>
                             <h5>{note.title}</h5>
-                            <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(note.content) }} />
+                            <p>{truncateContent(note.content)}</p>
                             <div>
                               {note.tags && note.tags.map((tag) => (
-                                <span key={tag} className="badge badge-secondary mr-1">{tag}</span>
+                                <span key={tag} className="badge badge-black mr-1">{tag}</span>
                               ))}
                             </div>
                             <small className="text-muted">
@@ -441,10 +476,27 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
                             >
                               <FontAwesomeIcon icon={favorites.includes(note.id) ? faStarSolid : faStarRegular} />
                             </Button>
-                            <Button variant="outline-primary" size="sm" className="mr-1" onClick={() => handleEditNote(note)}>
+                            <Button
+                              variant={isSpeaking && speakingNoteId === note.id ? "outline-danger" : "outline-primary"}
+                              size="sm"
+                              className="mr-1"
+                              onClick={() => handleSpeak(note.content, note.id)}
+                            >
+                              <FontAwesomeIcon icon={isSpeaking && speakingNoteId === note.id ? faStop : faVolumeUp} />
+                            </Button>
+                            <Button
+                              variant="outline-primary"
+                              size="sm"
+                              className="mr-1"
+                              onClick={() => handleEditNote(note)}
+                            >
                               <FontAwesomeIcon icon={faEdit} />
                             </Button>
-                            <Button variant="outline-danger" size="sm" onClick={() => handleDeleteNote(note.id)}>
+                            <Button
+                              variant="outline-danger"
+                              size="sm"
+                              onClick={() => handleDeleteNote(note.id)}
+                            >
                               <FontAwesomeIcon icon={faTrash} />
                             </Button>
                           </div>
@@ -549,67 +601,68 @@ const App = () => {
     setTimerRunning(false);
   };
 
+  const AppNavbar = () => (
+    <Navbar bg="dark" variant="dark" expand="lg" className="shadow-sm">
+      <div className="navbar-content">
+        <div className="app-title-container">
+          <Navbar.Brand href="#home" className="app-title">
+            NoteApp
+          </Navbar.Brand>
+        </div>
+        <div className="search-container-wrapper">
+          <Form inline className="search-form">
+            <div className="search-container">
+              <FontAwesomeIcon icon={faSearch} className="search-icon" />
+              <FormControl
+                type="text"
+                placeholder="Search notes..."
+                className="search-input"
+              />
+            </div>
+          </Form>
+        </div>
+        <div className="timer-controls">
+          <Button
+            variant="outline-light"
+            size="sm"
+            className="timer-button"
+            onClick={decrementMinutes}
+          >
+            −
+          </Button>
+          <span className="timer">{formatTime(pomodoroTime)}</span>
+          <Button
+            variant="outline-light"
+            size="sm"
+            className="timer-button"
+            onClick={incrementMinutes}
+          >
+            +
+          </Button>
+          <Button
+            variant="outline-light"
+            size="sm"
+            className="timer-button"
+            onClick={startPauseTimer}
+          >
+            <FontAwesomeIcon icon={timerRunning ? faPause : faPlay} />
+          </Button>
+          <Button
+            variant="outline-light"
+            size="sm"
+            className="timer-button"
+            onClick={resetTimer}
+          >
+            <FontAwesomeIcon icon={faRedo} />
+          </Button>
+        </div>
+      </div>
+    </Navbar>
+  );
+
   return (
     <Router>
       <div className="app">
-        {isAuthenticated && (
-          <Navbar bg="dark" variant="dark" expand="lg" className="shadow-sm">
-            <div className="navbar-content">
-              <div className="app-title-container">
-                <Navbar.Brand href="#home" className="app-title">
-                  NoteApp
-                </Navbar.Brand>
-              </div>
-              <div className="search-container-wrapper">
-                <Form inline className="search-form">
-                  <div className="search-container">
-                    <FontAwesomeIcon icon={faSearch} className="search-icon" />
-                    <FormControl
-                      type="text"
-                      placeholder="Search notes..."
-                      className="search-input"
-                    />
-                  </div>
-                </Form>
-              </div>
-              <div className="timer-controls">
-                <Button
-                  variant="outline-light"
-                  size="sm"
-                  className="timer-button"
-                  onClick={decrementMinutes}
-                >
-                  −
-                </Button>
-                <span className="timer">{formatTime(pomodoroTime)}</span>
-                <Button
-                  variant="outline-light"
-                  size="sm"
-                  className="timer-button"
-                  onClick={incrementMinutes}
-                >
-                  +
-                </Button>
-                <Button
-                  variant="outline-light"
-                  size="sm"
-                  className="timer-button"
-                  onClick={startPauseTimer}
-                >
-                  <FontAwesomeIcon icon={timerRunning ? faPause : faPlay} />
-                </Button>
-                <Button
-                  variant="outline-light"
-                  size="sm"
-                  className="timer-button"
-                  onClick={resetTimer}
-                >
-                  <FontAwesomeIcon icon={faRedo} />
-                </Button>
-              </div>
-            </div>
-          </Navbar>
-        )}
         <Routes>
           <Route
             path="/"
@@ -623,15 +676,48 @@ const App = () => {
               )
             }
           />
-          <Route path="/login" element={<LoginPage onLogin={handleLogin} />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/reset-password" element={<ResetPasswordPage />} />
-          <Route path="/*" element={<MainApp onLogout={handleLogout} toggleTheme={toggleTheme} theme={theme} />} />
+          <Route path="/login" element={
+            !isAuthenticated ? (
+              <LoginPage onLogin={handleLogin} />
+            ) : (
+              <Navigate to="/app" />
+            )
+          } />
+          <Route path="/register" element={
+            !isAuthenticated ? (
+              <RegisterPage />
+            ) : (
+              <Navigate to="/app" />
+            )
+          } />
+          <Route path="/forgot-password" element={
+            !isAuthenticated ? (
+              <ForgotPasswordPage />
+            ) : (
+              <Navigate to="/app" />
+            )
+          } />
+          <Route path="/reset-password" element={
+            !isAuthenticated ? (
+              <ResetPasswordPage />
+            ) : (
+              <Navigate to="/app" />
+            )
+          } />
+          <Route path="/*" element={
+            isAuthenticated ? (
+              <>
+                <AppNavbar />
+                <MainApp onLogout={handleLogout} toggleTheme={toggleTheme} theme={theme} />
+              </>
+            ) : (
+              <Navigate to="/login" />
+            )
+          } />
         </Routes>
       </div>
     </Router>
   );
 };
 
-export default App;
+export default App; 
