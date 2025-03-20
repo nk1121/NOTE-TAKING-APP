@@ -3,6 +3,7 @@ import { Form, Button, Alert, InputGroup } from 'react-bootstrap';
 import { useNavigate, Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
+import './LoginPage.css'; // Ensure the CSS file is imported
 
 const LoginPage = ({ onLogin }) => {
   const [email, setEmail] = useState('');
@@ -58,7 +59,7 @@ const LoginPage = ({ onLogin }) => {
   return (
     <div className="login-page">
       <div className="login-container card p-4 shadow-lg">
-        <h2 className="text-center mb-4">Login to Note-Taking App</h2>
+        <h2 className="text-center mb-4">Login to NoteApp</h2>
         {error && (
           <Alert variant={error.includes('successful') ? 'success' : 'danger'} className="text-center">
             {error}

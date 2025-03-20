@@ -1,0 +1,43 @@
+.login-page {
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #f8f9fa; /* Light background for better contrast */
+  }
+  
+  .login-container {
+    width: 100%;
+    max-width: 400px; /* Limit the width of the form */
+    border-radius: 8px;
+  }
+  
+  .login-container .card {
+    border: 1px solid #dee2e6;
+  }
+  
+  .login-container h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+  }
+  
+  .login-container .login-button {
+    background-color: #007bff;
+    border-color: #007bff;
+  }
+  
+  .login-container .login-button:hover {
+    background-color: #0056b3;
+    border-color: #0056b3;
+  }
+  
+  .login-container .forgot-password-link,
+  .login-container .signup-link {
+    color: #007bff;
+  }
+  
+  .login-container .forgot-password-link:hover,
+  .login-container .signup-link:hover {
+    color: #0056b3;
+    text-decoration: underline;
+  }
