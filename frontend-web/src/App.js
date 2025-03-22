@@ -121,6 +121,8 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
 
       const method = editingNoteId ? 'PUT' : 'POST';
       const url = editingNoteId ? `http://localhost:5000/notes/${editingNoteId}` : 'http://localhost:5000/notes';
+      
+      
       // Ensure tags are saved in uppercase
       const uppercaseTags = tags.map(tag => tag.toUpperCase());
       const response = await fetch(url, {
@@ -150,6 +152,8 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
     setEditingNoteId(note.id);
     setTitle(note.title);
     setContent(note.content);
+    
+    
     // Tags are already uppercase from fetchNotes
     setTags(note.tags || []);
     setCurrentView('write');
