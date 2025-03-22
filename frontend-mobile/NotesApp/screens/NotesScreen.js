@@ -2,34 +2,39 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, TextInput } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FontAwesome } from '@expo/vector-icons';
-import { useTheme, useView } from '../App';
-import { API_BASE_URL } from '../constants';
+import { useTheme } from '../App';
+import BASE_URL from '../config'; // This should point to NoteTakingAppMobile/config.js
 
 const NotesScreen = ({ navigation, route }) => {
   const { theme } = useTheme();
-  const { currentView, setCurrentView } = useView();
   const [notes, setNotes] = useState([]);
   const [favorites, setFavorites] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentView, setCurrentView] = useState(route.params?.view || 'write');
   const [selectedTag, setSelectedTag] = useState(null);
   const [isTagsExpanded, setIsTagsExpanded] = useState(true);
 
   useEffect(() => {
-    if (route.params?.view) {
-      setCurrentView(route.params.view);
-    }
-    fetchNotes();
-    const loadFavorites = async () => {
-      const storedFavorites = JSON.parse(await AsyncStorage.getItem('favorites')) || [];
-      setFavorites(storedFavorites);
+    const initializeNotes = async () => {
+      try {
+        await fetchNotes();
+        const storedFavorites = JSON.parse(await AsyncStorage.getItem('favorites')) || [];
+        setFavorites(storedFavorites);
+      } catch (error) {
+        console.error('Error initializing notes:', error);
+      }
     };
-    loadFavorites();
+
+    initializeNotes();
   }, []);
 
   const fetchNotes = async () => {
     try {
+      if (!BASE_URL) {
+        throw new Error('BASE_URL is not defined. Please check config.js.');
+      }
       const token = await AsyncStorage.getItem('token');
-      const response = await fetch(`${API_BASE_URL}/notes`, {
+      const response = await fetch(`${BASE_URL}/notes`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -53,8 +58,11 @@ const NotesScreen = ({ navigation, route }) => {
 
   const handleDelete = async (id) => {
     try {
+      if (!BASE_URL) {
+        throw new Error('BASE_URL is not defined. Please check config.js.');
+      }
       const token = await AsyncStorage.getItem('token');
-      const response = await fetch(`${API_BASE_URL}/notes/${id}`, {
+      const response = await fetch(`${BASE_URL}/notes/${id}`, {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -150,24 +158,41 @@ const NotesScreen = ({ navigation, route }) => {
             {currentView === 'favorites' ? 'Favorite Notes' : currentView === 'recent' ? 'Recent Notes' : selectedTag ? `Notes tagged with "${selectedTag}"` : 'All Notes'}
           </Text>
           {allTags.length > 0 && (
-            <View>
-              <TouchableOpacity onPress={() => setIsTagsExpanded(!isTagsExpanded)}>
+            <View style={styles.tagsSection}>
+              <TouchableOpacity
+                style={[styles.tagsHeaderContainer, { backgroundColor: theme === 'light' ? '#e9ecef' : '#2c3e50' }]}
+                onPress={() => setIsTagsExpanded(!isTagsExpanded)}
+              >
                 <Text style={[styles.tagsHeader, { color: theme === 'light' ? '#000' : '#f8f9fa' }]}>
-                  Tags {isTagsExpanded ? '▼' : '▶'}
+                  Tags
                 </Text>
+                <FontAwesome
+                  name={isTagsExpanded ? 'chevron-down' : 'chevron-right'}
+                  size={16}
+                  color={theme === 'light' ? '#000' : '#f8f9fa'}
+                />
               </TouchableOpacity>
-              {isTagsExpanded && allTags.map((tag) => (
-                <TouchableOpacity
-                  key={tag}
-                  style={[styles.tagItem, selectedTag === tag && styles.activeTagItem]}
-                  onPress={() => {
-                    setSelectedTag(tag);
-                    setCurrentView('all');
-                  }}
-                >
-                  <Text style={{ color: theme === 'light' ? '#000' : '#f8f9fa' }}>{tag}</Text>
-                </TouchableOpacity>
-              ))}
+              {isTagsExpanded && (
+                <View style={styles.tagsList}>
+                  {allTags.map((tag) => (
+                    <TouchableOpacity
+                      key={tag}
+                      style={[
+                        styles.tagItem,
+                        selectedTag === tag && styles.activeTagItem,
+                        { backgroundColor: theme === 'light' ? '#f1f3f5' : '#495057' },
+                      ]}
+                      onPress={() => {
+                        setSelectedTag(tag);
+                        setCurrentView('all');
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={{ color: theme === 'light' ? '#000' : '#f8f9fa' }}>{tag}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
             </View>
           )}
           <FlatList
@@ -232,13 +257,26 @@ const styles = StyleSheet.create({
     color: 'white',
     marginLeft: 5,
   },
+  tagsSection: {
+    marginBottom: 20,
+  },
+  tagsHeaderContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 10,
+    borderRadius: 5,
+    marginBottom: 5,
+  },
   tagsHeader: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
-    marginBottom: 10,
+  },
+  tagsList: {
+    paddingLeft: 10,
   },
   tagItem: {
-    padding: 5,
+    padding: 8,
     borderRadius: 5,
     marginBottom: 5,
   },

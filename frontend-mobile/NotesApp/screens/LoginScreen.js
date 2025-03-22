@@ -1,160 +1,96 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, Alert, TouchableOpacity } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { FontAwesome } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import { useAuth, useTheme } from '../App';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useAuth } from '../App';
-import { API_BASE_URL } from '../constants';
 
-const LoginScreen = ({ navigation }) => {
-  const { setIsAuthenticated } = useAuth();
-  const [isLogin, setIsLogin] = useState(true);
+const LoginScreen = () => {
   const [email, setEmail] = useState('');
-  const [username, setUsername] = useState('');
-  const [name, setName] = useState('');
-  const [profilePicture, setProfilePicture] = useState('');
-  const [bio, setBio] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [emailError, setEmailError] = useState(false);
-  const [usernameError, setUsernameError] = useState(false);
   const [passwordError, setPasswordError] = useState(false);
-  const [confirmPasswordError, setConfirmPasswordError] = useState(false);
+  const [error, setError] = useState('');
+  const navigation = useNavigation();
+  const { setIsAuthenticated } = useAuth();
+  const { theme } = useTheme();
 
-  const handleSubmit = async () => {
+  const handleLogin = async () => {
+    setError('');
     setEmailError(false);
-    setUsernameError(false);
     setPasswordError(false);
-    setConfirmPasswordError(false);
 
     if (!email) setEmailError(true);
-    if (!isLogin && !username) setUsernameError(true);
     if (!password) setPasswordError(true);
-    if (!isLogin && !confirmPassword) setConfirmPasswordError(true);
-
-    if (!email || (!isLogin && !username) || !password || (!isLogin && !confirmPassword)) {
-      Alert.alert('Error', 'Please fill in all required fields.');
-      return;
-    }
-
-    if (!isLogin && username.length > 10) {
-      setUsernameError(true);
-      Alert.alert('Error', 'Username must be 10 characters or less.');
-      return;
-    }
-
-    if (!isLogin && password !== confirmPassword) {
-      setPasswordError(true);
-      setConfirmPasswordError(true);
-      Alert.alert('Error', 'Passwords do not match.');
+    if (!email || !password) {
+      setError('Please fill in all fields.');
       return;
     }
 
     try {
-      const endpoint = isLogin ? '/login' : '/register';
-      const body = isLogin
-        ? { email, password }
-        : { email, username, password, name, profile_picture: profilePicture, bio };
-
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      const response = await fetch('http://172.19.139.223:5000/login', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
       });
 
       const data = await response.json();
-
       if (!response.ok) {
-        if (data.error === 'Email already exists') setEmailError(true);
-        if (data.error === 'Username already exists') setUsernameError(true);
         if (data.error === 'Invalid email or password') {
           setEmailError(true);
           setPasswordError(true);
         }
-        throw new Error(data.error || 'Something went wrong');
+        throw new Error(data.error || 'Login failed');
       }
 
-      if (isLogin) {
-        await AsyncStorage.setItem('token', data.token);
-        await AsyncStorage.setItem('username', data.username);
-        setIsAuthenticated(true);
-        navigation.navigate('Drawer');
-      } else {
-        Alert.alert('Success', 'Registration successful. Please log in.');
-        setIsLogin(true);
-      }
+      await AsyncStorage.setItem('token', data.token);
+      await AsyncStorage.setItem('username', data.username);
+      setIsAuthenticated(true);
     } catch (err) {
-      Alert.alert('Error', err.message);
+      setError(err.message);
     }
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>{isLogin ? 'Login to NoteApp' : 'Sign Up for NoteApp'}</Text>
-      <TextInput
-        style={[styles.input, emailError && styles.inputError]}
-        placeholder="Email *"
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-      />
-      {!isLogin && (
-        <>
-          <TextInput
-            style={[styles.input, usernameError && styles.inputError]}
-            placeholder="Username (max 10 characters) *"
-            value={username}
-            onChangeText={setUsername}
-            maxLength={10}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Full Name"
-            value={name}
-            onChangeText={setName}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Profile Picture URL"
-            value={profilePicture}
-            onChangeText={setProfilePicture}
-          />
-          <TextInput
-            style={[styles.input, { height: 100, textAlignVertical: 'top' }]}
-            placeholder="Bio"
-            value={bio}
-            onChangeText={setBio}
-            multiline
-          />
-        </>
-      )}
-      <TextInput
-        style={[styles.input, passwordError && styles.inputError]}
-        placeholder="Password *"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-      />
-      {!isLogin && (
+    <View style={[styles.container, { backgroundColor: theme === 'light' ? '#f8f9fa' : '#212529' }]}>
+      <View style={[styles.card, { backgroundColor: theme === 'light' ? '#fff' : '#343a40' }]}>
+        <Text style={[styles.title, { color: theme === 'light' ? '#000' : '#f8f9fa' }]}>Login to NoteApp</Text>
+        {error ? <Text style={styles.error}>{error}</Text> : null}
         <TextInput
-          style={[styles.input, confirmPasswordError && styles.inputError]}
-          placeholder="Confirm Password *"
-          value={confirmPassword}
-          onChangeText={setConfirmPassword}
-          secureTextEntry
+          style={[styles.input, emailError && styles.inputError, { backgroundColor: theme === 'light' ? '#fff' : '#495057', color: theme === 'light' ? '#000' : '#f8f9fa' }]}
+          placeholder="Email"
+          placeholderTextColor={theme === 'light' ? '#adb5bd' : '#adb5bd'}
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
         />
-      )}
-      <Button title={isLogin ? 'Login' : 'Sign Up'} onPress={handleSubmit} />
-      {isLogin && (
+        <View style={styles.passwordContainer}>
+          <TextInput
+            style={[styles.input, passwordError && styles.inputError, { backgroundColor: theme === 'light' ? '#fff' : '#495057', color: theme === 'light' ? '#000' : '#f8f9fa' }]}
+            placeholder="Password"
+            placeholderTextColor={theme === 'light' ? '#adb5bd' : '#adb5bd'}
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry={!showPassword}
+          />
+          <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
+            <FontAwesome name={showPassword ? 'eye-slash' : 'eye'} size={20} color={theme === 'light' ? '#666' : '#adb5bd'} />
+          </TouchableOpacity>
+        </View>
         <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')}>
           <Text style={styles.link}>Forgot Password?</Text>
         </TouchableOpacity>
-      )}
-      <TouchableOpacity onPress={() => setIsLogin(!isLogin)}>
-        <Text style={styles.link}>
-          {isLogin ? 'Don’t have an account? Sign Up' : 'Already have an account? Login'}
+        <TouchableOpacity style={styles.button} onPress={handleLogin}>
+          <Text style={styles.buttonText}>Login</Text>
+        </TouchableOpacity>
+        <Text style={[styles.text, { color: theme === 'light' ? '#000' : '#f8f9fa' }]}>
+          Don't have an account?{' '}
+          <Text style={styles.link} onPress={() => navigation.navigate('Register')}>
+            Sign Up
+          </Text>
         </Text>
-      </TouchableOpacity>
+      </View>
     </View>
   );
 };
@@ -162,30 +98,64 @@ const LoginScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
     justifyContent: 'center',
-    backgroundColor: '#f8f9fa',
+    padding: 20,
+  },
+  card: {
+    padding: 20,
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 5,
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 20,
     textAlign: 'center',
+    marginBottom: 20,
   },
   input: {
     borderWidth: 1,
     borderColor: '#ccc',
+    borderRadius: 5,
     padding: 10,
     marginBottom: 10,
-    borderRadius: 5,
   },
   inputError: {
     borderColor: 'red',
   },
+  passwordContainer: {
+    position: 'relative',
+  },
+  eyeIcon: {
+    position: 'absolute',
+    right: 10,
+    top: 15,
+  },
+  button: {
+    backgroundColor: '#007bff',
+    padding: 10,
+    borderRadius: 5,
+    alignItems: 'center',
+    marginVertical: 10,
+  },
+  buttonText: {
+    color: 'white',
+    fontSize: 16,
+  },
   link: {
-    marginTop: 10,
-    color: 'blue',
+    color: '#007bff',
     textAlign: 'center',
+    marginBottom: 10,
+  },
+  text: {
+    textAlign: 'center',
+  },
+  error: {
+    color: 'red',
+    textAlign: 'center',
+    marginBottom: 10,
   },
 });
 

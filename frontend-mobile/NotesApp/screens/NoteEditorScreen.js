@@ -1,48 +1,30 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, Alert, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Speech from 'expo-speech';
+import { FontAwesome } from '@expo/vector-icons';
 import { useTheme } from '../App';
-import { API_BASE_URL } from '../constants';
 
 const NoteEditorScreen = ({ route, navigation }) => {
-  const { theme } = useTheme();
   const { note } = route.params || {};
+  const { theme } = useTheme();
   const [title, setTitle] = useState(note ? note.title : '');
   const [content, setContent] = useState(note ? note.content : '');
-  const [tags, setTags] = useState(note ? note.tags : []);
+  const [tags, setTags] = useState(note ? note.tags || [] : []);
   const [tagInput, setTagInput] = useState('');
-  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSpeak = () => {
-    if (isSpeaking) {
-      Speech.stop();
-      setIsSpeaking(false);
+  const handleSaveNote = async () => {
+    if (!title || !content) {
+      setError('Please fill in both title and content.');
       return;
     }
 
-    const textToSpeak = `${title}. ${content}`;
-    if (!textToSpeak.trim()) {
-      Alert.alert('Error', 'No content to read aloud.');
-      return;
-    }
-
-    Speech.speak(textToSpeak, {
-      onDone: () => setIsSpeaking(false),
-      onError: () => setIsSpeaking(false),
-    });
-    setIsSpeaking(true);
-  };
-
-  const handleSave = async () => {
     try {
       const token = await AsyncStorage.getItem('token');
       const method = note ? 'PUT' : 'POST';
-      const url = note
-        ? `${API_BASE_URL}/notes/${note.id}`
-        : `${API_BASE_URL}/notes`;
-
+      const url = note ? `http://172.19.139.223:5000/notes/${note.id}` : 'http://172.19.139.223:5000/notes';
       const uppercaseTags = tags.map(tag => tag.toUpperCase());
+
       const response = await fetch(url, {
         method,
         headers: {
@@ -54,22 +36,21 @@ const NoteEditorScreen = ({ route, navigation }) => {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to save note');
+        throw new Error(errorData.error || (note ? 'Failed to update note' : 'Failed to create note'));
       }
 
-      Alert.alert('Success', 'Note saved successfully');
       navigation.goBack();
     } catch (err) {
-      Alert.alert('Error', err.message);
+      setError(err.message);
     }
   };
 
   const handleTagInputKeyPress = (text) => {
     setTagInput(text.toUpperCase());
     if (text.includes(',') || text.includes(' ')) {
-      const newTag = text.trim().replace(',', '');
+      const newTag = text.replace(/[, ]/g, '').trim();
       if (newTag && !tags.includes(newTag)) {
-        setTags([...tags, newTag.toUpperCase()]);
+        setTags([...tags, newTag]);
       }
       setTagInput('');
     }
@@ -80,44 +61,46 @@ const NoteEditorScreen = ({ route, navigation }) => {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme === 'light' ? '#f8f9fa' : '#212529' }]}>
-      <TextInput
-        style={[styles.input, { backgroundColor: theme === 'light' ? '#fff' : '#495057', color: theme === 'light' ? '#000' : '#f8f9fa' }]}
-        placeholder="Title"
-        placeholderTextColor={theme === 'light' ? '#adb5bd' : '#adb5bd'}
-        value={title}
-        onChangeText={setTitle}
-      />
-      <TextInput
-        style={[styles.input, styles.contentInput, { backgroundColor: theme === 'light' ? '#fff' : '#495057', color: theme === 'light' ? '#000' : '#f8f9fa' }]}
-        placeholder="Content"
-        placeholderTextColor={theme === 'light' ? '#adb5bd' : '#adb5bd'}
-        value={content}
-        onChangeText={setContent}
-        multiline
-      />
-      <View style={styles.tagsContainer}>
-        {tags.map((tag) => (
-          <View key={tag} style={styles.tag}>
-            <Text style={{ color: '#fff' }}>{tag}</Text>
-            <TouchableOpacity onPress={() => removeTag(tag)}>
-              <Text style={styles.tagRemove}>×</Text>
-            </TouchableOpacity>
-          </View>
-        ))}
+    <ScrollView style={[styles.container, { backgroundColor: theme === 'light' ? '#f8f9fa' : '#212529' }]}>
+      <View style={[styles.card, { backgroundColor: theme === 'light' ? '#fff' : '#343a40' }]}>
+        {error ? <Text style={styles.error}>{error}</Text> : null}
+        <TextInput
+          style={[styles.input, { backgroundColor: theme === 'light' ? '#fff' : '#495057', color: theme === 'light' ? '#000' : '#f8f9fa' }]}
+          placeholder="Note Title"
+          placeholderTextColor={theme === 'light' ? '#adb5bd' : '#adb5bd'}
+          value={title}
+          onChangeText={setTitle}
+        />
+        <TextInput
+          style={[styles.textArea, { backgroundColor: theme === 'light' ? '#fff' : '#495057', color: theme === 'light' ? '#000' : '#f8f9fa' }]}
+          placeholder="Write your note here..."
+          placeholderTextColor={theme === 'light' ? '#adb5bd' : '#adb5bd'}
+          value={content}
+          onChangeText={setContent}
+          multiline
+        />
+        <View style={styles.tagsContainer}>
+          {tags.map((tag) => (
+            <View key={tag} style={styles.tag}>
+              <Text style={styles.tagText}>{tag}</Text>
+              <TouchableOpacity onPress={() => removeTag(tag)}>
+                <Text style={styles.tagRemove}>×</Text>
+              </TouchableOpacity>
+            </View>
+          ))}
+          <TextInput
+            style={[styles.tagInput, { backgroundColor: theme === 'light' ? '#fff' : '#495057', color: theme === 'light' ? '#000' : '#f8f9fa' }]}
+            placeholder="Add tags (separate with commas or spaces)..."
+            placeholderTextColor={theme === 'light' ? '#adb5bd' : '#adb5bd'}
+            value={tagInput}
+            onChangeText={handleTagInputKeyPress}
+          />
+        </View>
+        <TouchableOpacity style={styles.button} onPress={handleSaveNote}>
+          <Text style={styles.buttonText}>{note ? 'Update Note' : 'Save Note'}</Text>
+        </TouchableOpacity>
       </View>
-      <TextInput
-        style={[styles.input, { backgroundColor: theme === 'light' ? '#fff' : '#495057', color: theme === 'light' ? '#000' : '#f8f9fa' }]}
-        placeholder="Add tags (separate with commas or spaces)..."
-        placeholderTextColor={theme === 'light' ? '#adb5bd' : '#adb5bd'}
-        value={tagInput}
-        onChangeText={handleTagInputKeyPress}
-      />
-      <View style={styles.buttonContainer}>
-        <Button title="Save" onPress={handleSave} />
-        <Button title={isSpeaking ? 'Stop' : 'Speak'} onPress={handleSpeak} color="#28a745" />
-      </View>
-    </View>
+    </ScrollView>
   );
 };
 
@@ -126,38 +109,70 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
   },
+  card: {
+    padding: 20,
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 5,
+  },
   input: {
     borderWidth: 1,
     borderColor: '#ccc',
+    borderRadius: 5,
     padding: 10,
     marginBottom: 10,
-    borderRadius: 5,
+    fontSize: 16,
   },
-  contentInput: {
-    height: 150,
+  textArea: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 5,
+    padding: 10,
+    marginBottom: 10,
+    height: 200,
     textAlignVertical: 'top',
   },
   tagsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
     marginBottom: 10,
   },
   tag: {
+    flexDirection: 'row',
     backgroundColor: '#000',
     borderRadius: 5,
     padding: 5,
     marginRight: 5,
     marginBottom: 5,
-    flexDirection: 'row',
-    alignItems: 'center',
+  },
+  tagText: {
+    color: '#fff',
+    fontSize: 14,
   },
   tagRemove: {
     color: 'red',
     marginLeft: 5,
   },
-  buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  tagInput: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 5,
+    padding: 10,
+  },
+  button: {
+    backgroundColor: '#007bff',
+    padding: 10,
+    borderRadius: 5,
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: 'white',
+    fontSize: 16,
+  },
+  error: {
+    color: 'red',
+    textAlign: 'center',
+    marginBottom: 10,
   },
 });
 

@@ -1,17 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, Alert, TouchableOpacity } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FontAwesome } from '@expo/vector-icons';
-import { useTheme, useAuth } from '../App';
-import { API_BASE_URL } from '../constants';
+import { useNavigation } from '@react-navigation/native';
+import { useAuth, useTheme } from '../App';
 
-const ProfileScreen = ({ navigation }) => {
-  const { theme, toggleTheme } = useTheme();
-  const { setIsAuthenticated } = useAuth();
+const ProfileScreen = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [name, setName] = useState('');
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const navigation = useNavigation();
+  const { setIsAuthenticated } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
     fetchProfile();
@@ -20,25 +23,29 @@ const ProfileScreen = ({ navigation }) => {
   const fetchProfile = async () => {
     try {
       const token = await AsyncStorage.getItem('token');
-      const response = await fetch(`${API_BASE_URL}/profile`, {
+      const response = await fetch('http://172.19.139.223:5000/profile', {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
+
       if (!response.ok) throw new Error('Failed to fetch profile');
       const data = await response.json();
       setEmail(data.email);
       setUsername(data.username);
       setName(data.name || '');
     } catch (err) {
-      Alert.alert('Error', err.message);
+      setError(err.message);
     }
   };
 
   const handleUpdateProfile = async () => {
+    setError('');
+    setSuccess('');
+
     try {
       const token = await AsyncStorage.getItem('token');
-      const response = await fetch(`${API_BASE_URL}/profile`, {
+      const response = await fetch('http://172.19.139.223:5000/profile', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -54,10 +61,10 @@ const ProfileScreen = ({ navigation }) => {
 
       const data = await response.json();
       await AsyncStorage.setItem('username', data.username);
-      Alert.alert('Success', 'Profile updated successfully!');
+      setSuccess('Profile updated successfully!');
       setIsEditing(false);
     } catch (err) {
-      Alert.alert('Error', err.message);
+      setError(err.message);
     }
   };
 
@@ -73,7 +80,7 @@ const ProfileScreen = ({ navigation }) => {
           onPress: async () => {
             try {
               const token = await AsyncStorage.getItem('token');
-              const response = await fetch(`${API_BASE_URL}/delete-account`, {
+              const response = await fetch('http://172.19.139.223:5000/delete-account', {
                 method: 'DELETE',
                 headers: {
                   Authorization: `Bearer ${token}`,
@@ -85,9 +92,8 @@ const ProfileScreen = ({ navigation }) => {
               await AsyncStorage.removeItem('token');
               await AsyncStorage.removeItem('username');
               setIsAuthenticated(false);
-              navigation.navigate('Login');
             } catch (err) {
-              Alert.alert('Error', err.message);
+              setError(err.message);
             }
           },
         },
@@ -99,58 +105,68 @@ const ProfileScreen = ({ navigation }) => {
     await AsyncStorage.removeItem('token');
     await AsyncStorage.removeItem('username');
     setIsAuthenticated(false);
-    navigation.navigate('Login');
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme === 'light' ? '#f8f9fa' : '#212529' }]}>
-      <View style={styles.toolbar}>
-        <TouchableOpacity onPress={() => setIsEditing(!isEditing)}>
-          <FontAwesome name="edit" size={20} color="white" />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={handleLogout} style={{ marginLeft: 10 }}>
-          <FontAwesome name="sign-out" size={20} color="white" />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={toggleTheme} style={{ marginLeft: 10 }}>
-          <FontAwesome name={theme === 'light' ? 'moon-o' : 'sun-o'} size={20} color="white" />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={handleDeleteAccount} style={{ marginLeft: 10 }}>
-          <FontAwesome name="trash" size={20} color="red" />
+    <ScrollView style={[styles.container, { backgroundColor: theme === 'light' ? '#f8f9fa' : '#212529' }]}>
+      <View style={[styles.card, { backgroundColor: theme === 'light' ? '#fff' : '#343a40' }]}>
+        <Text style={[styles.title, { color: theme === 'light' ? '#000' : '#f8f9fa' }]}>Profile</Text>
+        <View style={styles.toolbar}>
+          <TouchableOpacity style={styles.toolbarItem} onPress={() => setIsEditing(!isEditing)}>
+            <FontAwesome name="edit" size={20} color="white" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.toolbarItem} onPress={toggleTheme}>
+            <FontAwesome name={theme === 'light' ? 'moon-o' : 'sun-o'} size={20} color="white" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.toolbarItem} onPress={() => navigation.navigate('ChangePassword')}>
+            <FontAwesome name="lock" size={20} color="white" />
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.toolbarItem, styles.danger]} onPress={handleDeleteAccount}>
+            <FontAwesome name="trash" size={20} color="red" />
+          </TouchableOpacity>
+        </View>
+        {error ? <Text style={styles.error}>{error}</Text> : null}
+        {success ? <Text style={styles.success}>{success}</Text> : null}
+        {isEditing ? (
+          <>
+            <TextInput
+              style={[styles.input, { backgroundColor: theme === 'light' ? '#fff' : '#495057', color: theme === 'light' ? '#000' : '#f8f9fa' }]}
+              placeholder="Email"
+              placeholderTextColor={theme === 'light' ? '#adb5bd' : '#adb5bd'}
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+            />
+            <TextInput
+              style={[styles.input, { backgroundColor: theme === 'light' ? '#fff' : '#495057', color: theme === 'light' ? '#000' : '#f8f9fa' }]}
+              placeholder="Username"
+              placeholderTextColor={theme === 'light' ? '#adb5bd' : '#adb5bd'}
+              value={username}
+              onChangeText={setUsername}
+            />
+            <TextInput
+              style={[styles.input, { backgroundColor: theme === 'light' ? '#fff' : '#495057', color: theme === 'light' ? '#000' : '#f8f9fa' }]}
+              placeholder="Name"
+              placeholderTextColor={theme === 'light' ? '#adb5bd' : '#adb5bd'}
+              value={name}
+              onChangeText={setName}
+            />
+            <TouchableOpacity style={styles.button} onPress={handleUpdateProfile}>
+              <Text style={styles.buttonText}>Save Changes</Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <>
+            <Text style={[styles.info, { color: theme === 'light' ? '#000' : '#f8f9fa' }]}>Email: {email}</Text>
+            <Text style={[styles.info, { color: theme === 'light' ? '#000' : '#f8f9fa' }]}>Username: {username}</Text>
+            <Text style={[styles.info, { color: theme === 'light' ? '#000' : '#f8f9fa' }]}>Name: {name || 'Not set'}</Text>
+          </>
+        )}
+        <TouchableOpacity style={[styles.button, styles.logoutButton]} onPress={handleLogout}>
+          <Text style={styles.buttonText}>Log Out</Text>
         </TouchableOpacity>
       </View>
-      {isEditing ? (
-        <View>
-          <TextInput
-            style={[styles.input, { backgroundColor: theme === 'light' ? '#fff' : '#495057', color: theme === 'light' ? '#000' : '#f8f9fa' }]}
-            placeholder="Email"
-            value={email}
-            onChangeText={setEmail}
-          />
-          <TextInput
-            style={[styles.input, { backgroundColor: theme === 'light' ? '#fff' : '#495057', color: theme === 'light' ? '#000' : '#f8f9fa' }]}
-            placeholder="Username"
-            value={username}
-            onChangeText={setUsername}
-          />
-          <TextInput
-            style={[styles.input, { backgroundColor: theme === 'light' ? '#fff' : '#495057', color: theme === 'light' ? '#000' : '#f8f9fa' }]}
-            placeholder="Name"
-            value={name}
-            onChangeText={setName}
-          />
-          <Button title="Save Changes" onPress={handleUpdateProfile} />
-        </View>
-      ) : (
-        <View>
-          <Text style={{ color: theme === 'light' ? '#000' : '#f8f9fa' }}><Text style={styles.label}>Email:</Text> {email}</Text>
-          <Text style={{ color: theme === 'light' ? '#000' : '#f8f9fa' }}><Text style={styles.label}>Username:</Text> {username}</Text>
-          <Text style={{ color: theme === 'light' ? '#000' : '#f8f9fa' }}><Text style={styles.label}>Name:</Text> {name || 'Not set'}</Text>
-        </View>
-      )}
-      <TouchableOpacity onPress={() => navigation.navigate('ChangePassword')}>
-        <Text style={styles.link}>Change Password</Text>
-      </TouchableOpacity>
-    </View>
+    </ScrollView>
   );
 };
 
@@ -159,27 +175,68 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
   },
+  card: {
+    padding: 20,
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
   toolbar: {
     flexDirection: 'row',
     backgroundColor: '#2c3e50',
-    padding: 10,
     borderRadius: 5,
+    padding: 5,
     marginBottom: 20,
+  },
+  toolbarItem: {
+    padding: 10,
+    marginRight: 5,
+  },
+  danger: {
+    backgroundColor: '#ff6b6b',
   },
   input: {
     borderWidth: 1,
     borderColor: '#ccc',
+    borderRadius: 5,
     padding: 10,
     marginBottom: 10,
+  },
+  info: {
+    fontSize: 16,
+    marginBottom: 10,
+  },
+  button: {
+    backgroundColor: '#007bff',
+    padding: 10,
     borderRadius: 5,
+    alignItems: 'center',
+    marginVertical: 10,
   },
-  label: {
-    fontWeight: 'bold',
+  logoutButton: {
+    backgroundColor: '#dc3545',
   },
-  link: {
-    marginTop: 10,
-    color: 'blue',
+  buttonText: {
+    color: 'white',
+    fontSize: 16,
+  },
+  error: {
+    color: 'red',
     textAlign: 'center',
+    marginBottom: 10,
+  },
+  success: {
+    color: 'green',
+    textAlign: 'center',
+    marginBottom: 10,
   },
 });
 

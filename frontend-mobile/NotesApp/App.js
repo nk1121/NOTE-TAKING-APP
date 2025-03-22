@@ -1,36 +1,36 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
-import { NavigationContainer, useNavigation } from '@react-navigation/native';
+import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import LoginScreen from './screens/LoginScreen';
+import RegisterScreen from './screens/RegisterScreen';
+import ForgotPasswordScreen from './screens/ForgotPasswordScreen';
+import ResetPasswordScreen from './screens/ResetPasswordScreen';
 import NotesScreen from './screens/NotesScreen';
 import NoteEditorScreen from './screens/NoteEditorScreen';
 import ProfileScreen from './screens/ProfileScreen';
 import ChangePasswordScreen from './screens/ChangePasswordScreen';
-import ForgotPasswordScreen from './screens/ForgotPasswordScreen';
-import ResetPasswordScreen from './screens/ResetPasswordScreen';
-import { API_BASE_URL } from './constants';
+import SplashScreen from './components/SplashScreen';
 
-// Navigation setup
+// Theme Context
+const ThemeContext = createContext();
+export const useTheme = () => useContext(ThemeContext);
+
+// Auth Context
+const AuthContext = createContext();
+export const useAuth = () => useContext(AuthContext);
+
 const Stack = createStackNavigator();
 const Drawer = createDrawerNavigator();
-
-// Contexts
-const ThemeContext = createContext();
-const AuthContext = createContext();
-const ViewContext = createContext(); // Declared once here
 
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [theme, setTheme] = useState('light');
-  const [pomodoroTime, setPomodoroTime] = useState(25 * 60);
-  const [timerRunning, setTimerRunning] = useState(false);
-  const [customMinutes, setCustomMinutes] = useState(25);
+  const [showSplash, setShowSplash] = useState(true);
   const [currentView, setCurrentView] = useState('write');
-  const [username, setUsername] = useState('Guest');
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -38,11 +38,10 @@ const App = () => {
         const token = await AsyncStorage.getItem('token');
         setIsAuthenticated(!!token);
 
-        const storedUsername = await AsyncStorage.getItem('username');
-        if (storedUsername) setUsername(storedUsername);
-
         const savedTheme = (await AsyncStorage.getItem('theme')) || 'light';
         setTheme(savedTheme);
+
+        setTimeout(() => setShowSplash(false), 3000);
       } catch (error) {
         console.error('Error initializing app:', error);
       }
@@ -51,71 +50,19 @@ const App = () => {
     initializeApp();
   }, []);
 
-  useEffect(() => {
-    let interval;
-    if (timerRunning && pomodoroTime > 0) {
-      interval = setInterval(() => {
-        setPomodoroTime((prev) => prev - 1);
-      }, 1000);
-    } else if (pomodoroTime === 0) {
-      setTimerRunning(false);
-      Alert.alert('Pomodoro Timer', 'Timer finished!');
-    }
-    return () => clearInterval(interval);
-  }, [timerRunning, pomodoroTime]);
-
   const toggleTheme = async () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';
     setTheme(newTheme);
     await AsyncStorage.setItem('theme', newTheme);
   };
 
-  const formatTime = (seconds) => {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-  };
-
-  const startPauseTimer = () => {
-    if (!timerRunning) {
-      setPomodoroTime(customMinutes * 60);
-    }
-    setTimerRunning(!timerRunning);
-  };
-
-  const resetTimer = () => {
-    setTimerRunning(false);
-    setPomodoroTime(customMinutes * 60);
-  };
-
-  const incrementMinutes = () => {
-    setCustomMinutes((prev) => {
-      const newMinutes = prev + 1;
-      setPomodoroTime(newMinutes * 60);
-      return newMinutes;
-    });
-    setTimerRunning(false);
-  };
-
-  const decrementMinutes = () => {
-    setCustomMinutes((prev) => {
-      const newMinutes = Math.max(1, prev - 1);
-      setPomodoroTime(newMinutes * 60);
-      return newMinutes;
-    });
-    setTimerRunning(false);
-  };
-
-  const DrawerContent = () => {
-    const navigation = useNavigation();
+  const DrawerContent = ({ navigation }) => {
     const { setIsAuthenticated } = useAuth();
-    const { currentView } = useView();
 
     const handleLogout = async () => {
       await AsyncStorage.removeItem('token');
       await AsyncStorage.removeItem('username');
       setIsAuthenticated(false);
-      setUsername('Guest');
       navigation.navigate('Login');
     };
 
@@ -166,7 +113,7 @@ const App = () => {
           onPress={() => navigation.navigate('Profile')}
         >
           <FontAwesome name="user" size={20} color="white" />
-          <Text style={styles.drawerText}>{username}</Text>
+          <Text style={styles.drawerText}>{AsyncStorage.getItem('username') || 'Guest'}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.drawerItem}
@@ -180,7 +127,7 @@ const App = () => {
   };
 
   const DrawerNavigator = () => (
-    <Drawer.Navigator drawerContent={() => <DrawerContent />}>
+    <Drawer.Navigator drawerContent={(props) => <DrawerContent {...props} />}>
       <Drawer.Screen
         name="Notes"
         component={NotesScreen}
@@ -188,41 +135,37 @@ const App = () => {
           headerTitle: () => (
             <View style={styles.header}>
               <Text style={styles.headerTitle}>NoteApp</Text>
-              <View style={styles.timerControls}>
-                <TouchableOpacity onPress={decrementMinutes}>
-                  <Text style={styles.timerButton}>−</Text>
-                </TouchableOpacity>
-                <Text style={styles.timerText}>{formatTime(pomodoroTime)}</Text>
-                <TouchableOpacity onPress={incrementMinutes}>
-                  <Text style={styles.timerButton}>+</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={startPauseTimer}>
-                  <FontAwesome name={timerRunning ? 'pause' : 'play'} size={20} color="white" />
-                </TouchableOpacity>
-                <TouchableOpacity onPress={resetTimer}>
-                  <FontAwesome name="undo" size={20} color="white" style={{ marginLeft: 10 }} />
-                </TouchableOpacity>
-              </View>
             </View>
           ),
           headerStyle: { backgroundColor: theme === 'light' ? '#343a40' : '#1a252f' },
           headerTintColor: '#fff',
         }}
+        initialParams={{ view: 'write' }}
       />
       <Drawer.Screen
         name="NoteEditor"
         component={NoteEditorScreen}
-        options={{ title: 'Edit Note', headerStyle: { backgroundColor: theme === 'light' ? '#343a40' : '#1a252f' }, headerTintColor: '#fff' }}
+        options={{
+          title: 'Edit Note',
+          headerStyle: { backgroundColor: theme === 'light' ? '#343a40' : '#1a252f' },
+          headerTintColor: '#fff',
+        }}
       />
       <Drawer.Screen
         name="Profile"
         component={ProfileScreen}
-        options={{ headerStyle: { backgroundColor: theme === 'light' ? '#343a40' : '#1a252f' }, headerTintColor: '#fff' }}
+        options={{
+          headerStyle: { backgroundColor: theme === 'light' ? '#343a40' : '#1a252f' },
+          headerTintColor: '#fff',
+        }}
       />
       <Drawer.Screen
         name="ChangePassword"
         component={ChangePasswordScreen}
-        options={{ headerStyle: { backgroundColor: theme === 'light' ? '#343a40' : '#1a252f' }, headerTintColor: '#fff' }}
+        options={{
+          headerStyle: { backgroundColor: theme === 'light' ? '#343a40' : '#1a252f' },
+          headerTintColor: '#fff',
+        }}
       />
     </Drawer.Navigator>
   );
@@ -230,8 +173,10 @@ const App = () => {
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme }}>
       <AuthContext.Provider value={{ isAuthenticated, setIsAuthenticated }}>
-        <ViewContext.Provider value={{ currentView, setCurrentView }}>
-          <NavigationContainer>
+        <NavigationContainer>
+          {showSplash ? (
+            <SplashScreen />
+          ) : (
             <Stack.Navigator>
               {!isAuthenticated ? (
                 <>
@@ -241,14 +186,31 @@ const App = () => {
                     options={{ headerShown: false }}
                   />
                   <Stack.Screen
+                    name="Register"
+                    component={RegisterScreen}
+                    options={{
+                      title: 'Sign Up',
+                      headerStyle: { backgroundColor: theme === 'light' ? '#343a40' : '#1a252f' },
+                      headerTintColor: '#fff',
+                    }}
+                  />
+                  <Stack.Screen
                     name="ForgotPassword"
                     component={ForgotPasswordScreen}
-                    options={{ title: 'Forgot Password', headerStyle: { backgroundColor: theme === 'light' ? '#343a40' : '#1a252f' }, headerTintColor: '#fff' }}
+                    options={{
+                      title: 'Forgot Password',
+                      headerStyle: { backgroundColor: theme === 'light' ? '#343a40' : '#1a252f' },
+                      headerTintColor: '#fff',
+                    }}
                   />
                   <Stack.Screen
                     name="ResetPassword"
                     component={ResetPasswordScreen}
-                    options={{ title: 'Reset Password', headerStyle: { backgroundColor: theme === 'light' ? '#343a40' : '#1a252f' }, headerTintColor: '#fff' }}
+                    options={{
+                      title: 'Reset Password',
+                      headerStyle: { backgroundColor: theme === 'light' ? '#343a40' : '#1a252f' },
+                      headerTintColor: '#fff',
+                    }}
                   />
                 </>
               ) : (
@@ -259,8 +221,8 @@ const App = () => {
                 />
               )}
             </Stack.Navigator>
-          </NavigationContainer>
-        </ViewContext.Provider>
+          )}
+        </NavigationContainer>
       </AuthContext.Provider>
     </ThemeContext.Provider>
   );
@@ -297,24 +259,6 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
   },
-  timerControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  timerText: {
-    color: 'white',
-    fontSize: 16,
-    marginHorizontal: 10,
-  },
-  timerButton: {
-    color: 'white',
-    fontSize: 20,
-    paddingHorizontal: 10,
-  },
 });
 
 export default App;
-export { AuthContext, ThemeContext, ViewContext }; // Export the existing contexts
-export const useAuth = () => useContext(AuthContext);
-export const useTheme = () => useContext(ThemeContext);
-export const useView = () => useContext(ViewContext);
