@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { useTheme } from '../App';
+import { useTheme } from '../context'; // Updated import
 
 const ForgotPasswordScreen = () => {
   const [email, setEmail] = useState('');

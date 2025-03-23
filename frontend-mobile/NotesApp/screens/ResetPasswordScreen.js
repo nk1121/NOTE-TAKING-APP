@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { useTheme } from '../App';
+import { useTheme } from '../context'; // Updated import
 
 const ResetPasswordScreen = () => {
   const [newPassword, setNewPassword] = useState('');

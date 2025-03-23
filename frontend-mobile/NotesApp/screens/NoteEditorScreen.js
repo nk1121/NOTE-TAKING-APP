@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FontAwesome } from '@expo/vector-icons';
-import { useTheme } from '../App';
+import { useTheme } from '../context';
+import * as Speech from 'expo-speech';
 
 const NoteEditorScreen = ({ route, navigation }) => {
   const { note } = route.params || {};
@@ -12,6 +13,52 @@ const NoteEditorScreen = ({ route, navigation }) => {
   const [tags, setTags] = useState(note ? note.tags || [] : []);
   const [tagInput, setTagInput] = useState('');
   const [error, setError] = useState('');
+  const [isSpeaking, setIsSpeaking] = useState(false);
+
+  // Clean HTML tags from content for speech
+  const cleanContentForSpeech = (text) => {
+    return text.replace(/<[^>]+>/g, '');
+  };
+
+  // Check available voices on mount
+  useEffect(() => {
+    Speech.getAvailableVoicesAsync().then(voices => {
+      console.log('Available voices:', voices);
+    });
+    return () => {
+      Speech.stop();
+    };
+  }, []);
+
+  // Handle text-to-speech
+  const handleTextToSpeech = async () => {
+    if (isSpeaking) {
+      console.log('Stopping speech');
+      Speech.stop();
+      setIsSpeaking(false);
+    } else if (content) {
+      const cleanText = cleanContentForSpeech(content);
+      console.log('Starting speech with text:', cleanText);
+      setIsSpeaking(true);
+      await Speech.speak(cleanText, {
+        language: 'en',
+        pitch: 1.0,
+        rate: 1.0,
+        onStart: () => console.log('Speech started'),
+        onDone: () => {
+          console.log('Speech finished');
+          setIsSpeaking(false);
+        },
+        onError: (error) => {
+          console.log('Speech error:', error);
+          setIsSpeaking(false);
+          Alert.alert('Error', 'Failed to play speech: ' + error.message);
+        },
+      });
+    } else {
+      Alert.alert('No Content', 'Please add some content to read aloud.');
+    }
+  };
 
   const handleSaveNote = async () => {
     if (!title || !content) {
@@ -79,6 +126,14 @@ const NoteEditorScreen = ({ route, navigation }) => {
           onChangeText={setContent}
           multiline
         />
+        <TouchableOpacity style={styles.speechButton} onPress={handleTextToSpeech}>
+          <FontAwesome
+            name={isSpeaking ? 'stop' : 'play'}
+            size={20}
+            color="#fff"
+          />
+          <Text style={styles.buttonText}>{isSpeaking ? 'Stop Speech' : 'Read Aloud'}</Text>
+        </TouchableOpacity>
         <View style={styles.tagsContainer}>
           {tags.map((tag) => (
             <View key={tag} style={styles.tag}>
@@ -134,6 +189,15 @@ const styles = StyleSheet.create({
     height: 200,
     textAlignVertical: 'top',
   },
+  speechButton: {
+    backgroundColor: '#28a745',
+    padding: 10,
+    borderRadius: 5,
+    alignItems: 'center',
+    marginBottom: 10,
+    flexDirection: 'row',
+    justifyContent: 'center',
+  },
   tagsContainer: {
     marginBottom: 10,
   },
@@ -168,6 +232,7 @@ const styles = StyleSheet.create({
   buttonText: {
     color: 'white',
     fontSize: 16,
+    marginLeft: 5,
   },
   error: {
     color: 'red',

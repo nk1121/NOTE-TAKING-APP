@@ -3,7 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'reac
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FontAwesome } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { useTheme } from '../App';
+import { useTheme } from '../context'; // Updated import
 
 const ChangePasswordScreen = () => {
   const [currentPassword, setCurrentPassword] = useState('');

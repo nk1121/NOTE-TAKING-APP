@@ -3,7 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FontAwesome } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { useAuth, useTheme } from '../App';
+import { useAuth, useTheme } from '../context'; // Updated import
 
 const ProfileScreen = () => {
   const [isEditing, setIsEditing] = useState(false);

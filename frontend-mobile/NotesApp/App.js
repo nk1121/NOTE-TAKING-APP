@@ -1,263 +1,425 @@
-import React, { useState, useEffect, createContext, useContext } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Alert, Text, View, TouchableOpacity, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
+import { createDrawerNavigator, DrawerContentScrollView, DrawerItemList, DrawerItem } from '@react-navigation/drawer';
 import { createStackNavigator } from '@react-navigation/stack';
-import { createDrawerNavigator } from '@react-navigation/drawer';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Alert, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
+
+import NotesScreen from './screens/NotesScreen';
+import NoteEditorScreen from './screens/NoteEditorScreen';
 import LoginScreen from './screens/LoginScreen';
 import RegisterScreen from './screens/RegisterScreen';
 import ForgotPasswordScreen from './screens/ForgotPasswordScreen';
 import ResetPasswordScreen from './screens/ResetPasswordScreen';
-import NotesScreen from './screens/NotesScreen';
-import NoteEditorScreen from './screens/NoteEditorScreen';
 import ProfileScreen from './screens/ProfileScreen';
 import ChangePasswordScreen from './screens/ChangePasswordScreen';
-import SplashScreen from './components/SplashScreen';
+import { AuthContext, ThemeContext } from './context'; // Import from context.js
 
-// Theme Context
-const ThemeContext = createContext();
-export const useTheme = () => useContext(ThemeContext);
-
-// Auth Context
-const AuthContext = createContext();
-export const useAuth = () => useContext(AuthContext);
-
-const Stack = createStackNavigator();
 const Drawer = createDrawerNavigator();
+const Stack = createStackNavigator();
 
-const App = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [theme, setTheme] = useState('light');
-  const [showSplash, setShowSplash] = useState(true);
-  const [currentView, setCurrentView] = useState('write');
+const CustomDrawerContent = (props) => {
+  const { state, navigation, notesCount, favoritesCount, setIsAuthenticated } = props;
+  const [username, setUsername] = useState('');
+  const [tags, setTags] = useState([]);
+  const [isTagsExpanded, setIsTagsExpanded] = useState(false);
 
   useEffect(() => {
-    const initializeApp = async () => {
+    const fetchUsernameAndTags = async () => {
+      const storedUsername = await AsyncStorage.getItem('username');
+      setUsername(storedUsername || 'User');
+
       try {
         const token = await AsyncStorage.getItem('token');
-        setIsAuthenticated(!!token);
+        const response = await fetch('http://172.19.139.223:5000/notes', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
 
-        const savedTheme = (await AsyncStorage.getItem('theme')) || 'light';
-        setTheme(savedTheme);
+        const responseText = await response.text();
+        console.log('Raw response (fetchUsernameAndTags):', responseText);
 
-        setTimeout(() => setShowSplash(false), 3000);
+        if (!response.ok) {
+          let errorData;
+          try {
+            errorData = JSON.parse(responseText);
+          } catch (e) {
+            throw new Error(`Server returned non-JSON response: ${responseText}`);
+          }
+          throw new Error(errorData.error || `Failed to fetch notes (Status: ${response.status})`);
+        }
+
+        const data = JSON.parse(responseText);
+        const allTags = new Set();
+        data.forEach(note => {
+          if (note.tags && Array.isArray(note.tags)) {
+            note.tags.forEach(tag => allTags.add(tag.toUpperCase()));
+          }
+        });
+        setTags([...allTags]);
       } catch (error) {
-        console.error('Error initializing app:', error);
+        console.error('Error fetching tags:', error.message);
+        if (error.message.includes('Invalid token')) {
+          await AsyncStorage.removeItem('token');
+          await AsyncStorage.removeItem('username');
+          setIsAuthenticated(false);
+        }
       }
     };
+    fetchUsernameAndTags();
+  }, [setIsAuthenticated]);
 
-    initializeApp();
-  }, []);
-
-  const toggleTheme = async () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light';
-    setTheme(newTheme);
-    await AsyncStorage.setItem('theme', newTheme);
-  };
-
-  const DrawerContent = ({ navigation }) => {
-    const { setIsAuthenticated } = useAuth();
-
-    const handleLogout = async () => {
+  const handleLogout = async () => {
+    try {
       await AsyncStorage.removeItem('token');
       await AsyncStorage.removeItem('username');
       setIsAuthenticated(false);
-      navigation.navigate('Login');
-    };
-
-    return (
-      <View style={[styles.drawerContainer, { backgroundColor: theme === 'light' ? '#2c3e50' : '#1a252f' }]}>
-        <TouchableOpacity
-          style={[styles.drawerItem, currentView === 'write' && styles.activeDrawerItem]}
-          onPress={() => {
-            setCurrentView('write');
-            navigation.navigate('Notes', { view: 'write' });
-          }}
-        >
-          <FontAwesome name="pencil" size={20} color="white" />
-          <Text style={styles.drawerText}>Write Note</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.drawerItem, currentView === 'all' && styles.activeDrawerItem]}
-          onPress={() => {
-            setCurrentView('all');
-            navigation.navigate('Notes', { view: 'all' });
-          }}
-        >
-          <FontAwesome name="sticky-note" size={20} color="white" />
-          <Text style={styles.drawerText}>All Notes</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.drawerItem, currentView === 'favorites' && styles.activeDrawerItem]}
-          onPress={() => {
-            setCurrentView('favorites');
-            navigation.navigate('Notes', { view: 'favorites' });
-          }}
-        >
-          <FontAwesome name="star" size={20} color="white" />
-          <Text style={styles.drawerText}>Favorites</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.drawerItem, currentView === 'recent' && styles.activeDrawerItem]}
-          onPress={() => {
-            setCurrentView('recent');
-            navigation.navigate('Notes', { view: 'recent' });
-          }}
-        >
-          <FontAwesome name="clock-o" size={20} color="white" />
-          <Text style={styles.drawerText}>Recent</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.drawerItem}
-          onPress={() => navigation.navigate('Profile')}
-        >
-          <FontAwesome name="user" size={20} color="white" />
-          <Text style={styles.drawerText}>{AsyncStorage.getItem('username') || 'Guest'}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.drawerItem}
-          onPress={handleLogout}
-        >
-          <FontAwesome name="sign-out" size={20} color="white" />
-          <Text style={styles.drawerText}>Log Out</Text>
-        </TouchableOpacity>
-      </View>
-    );
+    } catch (error) {
+      Alert.alert('Error', 'Failed to log out. Please try again.');
+    }
   };
 
-  const DrawerNavigator = () => (
-    <Drawer.Navigator drawerContent={(props) => <DrawerContent {...props} />}>
+  const handleTagPress = (tag) => {
+    navigation.navigate('Notes', { view: 'tags', tag });
+  };
+
+  return (
+    <DrawerContentScrollView {...props} contentContainerStyle={styles.drawerContent}>
+      <View style={styles.drawerHeader}>
+        <Text style={styles.drawerHeaderText}>NoteApp</Text>
+      </View>
+      <DrawerItemList {...props} />
+      <DrawerItem
+        label="Tags"
+        labelStyle={styles.drawerHeaderLabel}
+        style={styles.drawerHeaderItem}
+        icon={() => (
+          <FontAwesome
+            name={isTagsExpanded ? 'angle-down' : 'angle-right'}
+            size={20}
+            color="#fff"
+          />
+        )}
+        onPress={() => setIsTagsExpanded(!isTagsExpanded)}
+        inactiveTintColor="#fff"
+      />
+      {isTagsExpanded && (
+        <View style={styles.tagsContainer}>
+          {tags.length > 0 ? (
+            tags.map((tag) => (
+              <DrawerItem
+                key={tag}
+                label={tag}
+                labelStyle={styles.tagLabel}
+                onPress={() => handleTagPress(tag)}
+                inactiveTintColor="#fff"
+              />
+            ))
+          ) : (
+            <Text style={styles.noTagsText}>No tags available</Text>
+          )}
+        </View>
+      )}
+      <DrawerItem
+        label="Export Notes"
+        labelStyle={styles.drawerLabel}
+        icon={() => <FontAwesome name="download" size={20} color="#fff" />}
+        onPress={() => Alert.alert('Export Notes', 'This feature is not implemented yet.')}
+        inactiveTintColor="#fff"
+      />
+      <DrawerItem
+        label="NextCloud Sync"
+        labelStyle={styles.drawerLabel}
+        icon={() => <FontAwesome name="cloud" size={20} color="#fff" />}
+        onPress={() => Alert.alert('NextCloud Sync', 'This feature is not implemented yet.')}
+        inactiveTintColor="#fff"
+      />
+      <View style={styles.drawerFooter}>
+        <View style={styles.profileContainer}>
+          <FontAwesome name="user" size={20} color="#fff" style={styles.userIcon} />
+          <Text style={styles.username}>{username.toUpperCase()}</Text>
+        </View>
+        <DrawerItem
+          label="Log Out"
+          labelStyle={styles.drawerLabel}
+          icon={() => <FontAwesome name="sign-out" size={20} color="#fff" />}
+          onPress={handleLogout}
+          inactiveTintColor="#fff"
+        />
+      </View>
+    </DrawerContentScrollView>
+  );
+};
+
+const DrawerNavigator = ({ notesCount, favoritesCount, setIsAuthenticated }) => {
+  return (
+    <Drawer.Navigator
+      initialRouteName="All Notes"
+      drawerContent={(props) => (
+        <CustomDrawerContent
+          {...props}
+          notesCount={notesCount}
+          favoritesCount={favoritesCount}
+          setIsAuthenticated={setIsAuthenticated}
+        />
+      )}
+      screenOptions={{
+        drawerStyle: {
+          backgroundColor: '#2A3E4C',
+          width: 250,
+        },
+        drawerActiveTintColor: '#fff',
+        drawerInactiveTintColor: '#fff',
+        drawerActiveBackgroundColor: '#007bff',
+        drawerLabelStyle: {
+          fontSize: 16,
+        },
+      }}
+    >
+      <Drawer.Screen
+        name="Write Note"
+        component={NoteEditorScreen}
+        initialParams={{ note: null }}
+        options={{
+          drawerIcon: ({ color }) => <FontAwesome name="pencil" size={20} color={color} />,
+          drawerLabel: 'Write Note',
+        }}
+      />
+      <Drawer.Screen
+        name="All Notes"
+        component={NotesScreen}
+        initialParams={{ view: 'all' }}
+        options={{
+          drawerIcon: ({ color }) => <FontAwesome name="folder" size={20} color={color} />,
+          drawerLabel: () => (
+            <Text style={styles.drawerLabel}>
+              All Notes {notesCount > 0 ? `(${notesCount})` : ''}
+            </Text>
+          ),
+        }}
+      />
+      <Drawer.Screen
+        name="Favorites"
+        component={NotesScreen}
+        initialParams={{ view: 'favorites' }}
+        options={{
+          drawerIcon: ({ color }) => <FontAwesome name="star" size={20} color={color} />,
+          drawerLabel: () => (
+            <Text style={styles.drawerLabel}>
+              Favorites {favoritesCount > 0 ? `(${favoritesCount})` : ''}
+            </Text>
+          ),
+        }}
+      />
+      <Drawer.Screen
+        name="Recent"
+        component={NotesScreen}
+        initialParams={{ view: 'recent' }}
+        options={{
+          drawerIcon: ({ color }) => <FontAwesome name="clock-o" size={20} color={color} />,
+          drawerLabel: 'Recent',
+        }}
+      />
       <Drawer.Screen
         name="Notes"
         component={NotesScreen}
         options={{
-          headerTitle: () => (
-            <View style={styles.header}>
-              <Text style={styles.headerTitle}>NoteApp</Text>
-            </View>
-          ),
-          headerStyle: { backgroundColor: theme === 'light' ? '#343a40' : '#1a252f' },
-          headerTintColor: '#fff',
-        }}
-        initialParams={{ view: 'write' }}
-      />
-      <Drawer.Screen
-        name="NoteEditor"
-        component={NoteEditorScreen}
-        options={{
-          title: 'Edit Note',
-          headerStyle: { backgroundColor: theme === 'light' ? '#343a40' : '#1a252f' },
-          headerTintColor: '#fff',
-        }}
-      />
-      <Drawer.Screen
-        name="Profile"
-        component={ProfileScreen}
-        options={{
-          headerStyle: { backgroundColor: theme === 'light' ? '#343a40' : '#1a252f' },
-          headerTintColor: '#fff',
-        }}
-      />
-      <Drawer.Screen
-        name="ChangePassword"
-        component={ChangePasswordScreen}
-        options={{
-          headerStyle: { backgroundColor: theme === 'light' ? '#343a40' : '#1a252f' },
-          headerTintColor: '#fff',
+          drawerItemStyle: { display: 'none' },
         }}
       />
     </Drawer.Navigator>
   );
+};
+
+const App = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState(null);
+  const [theme, setTheme] = useState('light');
+  const [notesCount, setNotesCount] = useState(0);
+  const [favoritesCount, setFavoritesCount] = useState(0);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const token = await AsyncStorage.getItem('token');
+        if (token) {
+          const response = await fetch('http://172.19.139.223:5000/notes', {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          const responseText = await response.text();
+          console.log('Raw response (checkAuth):', responseText);
+
+          if (!response.ok) {
+            let errorData;
+            try {
+              errorData = JSON.parse(responseText);
+            } catch (e) {
+              throw new Error(`Server returned non-JSON response: ${responseText}`);
+            }
+            throw new Error(errorData.error || `Failed to verify token (Status: ${response.status})`);
+          }
+
+          setIsAuthenticated(true);
+          await fetchNotesCount();
+          await fetchFavoritesCount();
+        } else {
+          setIsAuthenticated(false);
+        }
+      } catch (error) {
+        console.error('Error checking auth:', error.message);
+        if (error.message.includes('Invalid token')) {
+          await AsyncStorage.removeItem('token');
+          await AsyncStorage.removeItem('username');
+        }
+        setIsAuthenticated(false);
+      }
+    };
+    checkAuth();
+  }, []);
+
+  const fetchNotesCount = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const response = await fetch('http://172.19.139.223:5000/notes', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const responseText = await response.text();
+      console.log('Raw response (fetchNotesCount):', responseText);
+
+      if (!response.ok) {
+        let errorData;
+        try {
+          errorData = JSON.parse(responseText);
+        } catch (e) {
+          throw new Error(`Server returned non-JSON response: ${responseText}`);
+        }
+        throw new Error(errorData.error || `Failed to fetch notes count (Status: ${response.status})`);
+      }
+
+      const data = JSON.parse(responseText);
+      setNotesCount(data.length);
+    } catch (error) {
+      console.error('Error fetching notes count:', error.message);
+      if (error.message.includes('Invalid token')) {
+        setIsAuthenticated(false);
+      }
+    }
+  };
+
+  const fetchFavoritesCount = async () => {
+    try {
+      const favorites = JSON.parse(await AsyncStorage.getItem('favorites')) || [];
+      setFavoritesCount(favorites.length);
+    } catch (error) {
+      console.error('Error fetching favorites count:', error);
+    }
+  };
+
+  if (isAuthenticated === null) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Text>Loading...</Text>
+      </View>
+    );
+  }
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
-      <AuthContext.Provider value={{ isAuthenticated, setIsAuthenticated }}>
+    <AuthContext.Provider value={{ isAuthenticated, setIsAuthenticated }}>
+      <ThemeContext.Provider value={{ theme, setTheme }}>
         <NavigationContainer>
-          {showSplash ? (
-            <SplashScreen />
+          {isAuthenticated ? (
+            <Stack.Navigator screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="Drawer">
+                {() => (
+                  <DrawerNavigator
+                    notesCount={notesCount}
+                    favoritesCount={favoritesCount}
+                    setIsAuthenticated={setIsAuthenticated}
+                  />
+                )}
+              </Stack.Screen>
+              <Stack.Screen name="NoteEditor" component={NoteEditorScreen} />
+              <Stack.Screen name="Profile" component={ProfileScreen} />
+              <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
+            </Stack.Navigator>
           ) : (
-            <Stack.Navigator>
-              {!isAuthenticated ? (
-                <>
-                  <Stack.Screen
-                    name="Login"
-                    component={LoginScreen}
-                    options={{ headerShown: false }}
-                  />
-                  <Stack.Screen
-                    name="Register"
-                    component={RegisterScreen}
-                    options={{
-                      title: 'Sign Up',
-                      headerStyle: { backgroundColor: theme === 'light' ? '#343a40' : '#1a252f' },
-                      headerTintColor: '#fff',
-                    }}
-                  />
-                  <Stack.Screen
-                    name="ForgotPassword"
-                    component={ForgotPasswordScreen}
-                    options={{
-                      title: 'Forgot Password',
-                      headerStyle: { backgroundColor: theme === 'light' ? '#343a40' : '#1a252f' },
-                      headerTintColor: '#fff',
-                    }}
-                  />
-                  <Stack.Screen
-                    name="ResetPassword"
-                    component={ResetPasswordScreen}
-                    options={{
-                      title: 'Reset Password',
-                      headerStyle: { backgroundColor: theme === 'light' ? '#343a40' : '#1a252f' },
-                      headerTintColor: '#fff',
-                    }}
-                  />
-                </>
-              ) : (
-                <Stack.Screen
-                  name="Drawer"
-                  component={DrawerNavigator}
-                  options={{ headerShown: false }}
-                />
-              )}
+            <Stack.Navigator screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="Login" component={LoginScreen} />
+              <Stack.Screen name="Register" component={RegisterScreen} />
+              <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+              <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
             </Stack.Navigator>
           )}
         </NavigationContainer>
-      </AuthContext.Provider>
-    </ThemeContext.Provider>
+      </ThemeContext.Provider>
+    </AuthContext.Provider>
   );
 };
 
 const styles = StyleSheet.create({
-  drawerContainer: {
+  drawerContent: {
     flex: 1,
-    padding: 20,
   },
-  drawerItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 10,
-    borderRadius: 5,
-    marginBottom: 10,
+  drawerHeader: {
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#3A4E5C',
   },
-  activeDrawerItem: {
-    backgroundColor: '#34495e',
-  },
-  drawerText: {
-    color: 'white',
-    marginLeft: 10,
-    fontSize: 16,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '100%',
-  },
-  headerTitle: {
-    color: 'white',
+  drawerHeaderText: {
     fontSize: 20,
     fontWeight: 'bold',
+    color: '#fff',
+  },
+  drawerHeaderItem: {
+    backgroundColor: '#2A3E4C',
+    marginTop: 10,
+  },
+  drawerHeaderLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  drawerLabel: {
+    fontSize: 16,
+    color: '#fff',
+  },
+  tagsContainer: {
+    paddingLeft: 20,
+  },
+  tagLabel: {
+    fontSize: 14,
+    color: '#fff',
+  },
+  noTagsText: {
+    fontSize: 14,
+    color: '#fff',
+    paddingLeft: 20,
+    paddingVertical: 5,
+  },
+  drawerFooter: {
+    padding: 15,
+    borderTopWidth: 1,
+    borderTopColor: '#3A4E5C',
+    marginTop: 'auto',
+  },
+  profileContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  userIcon: {
+    marginRight: 10,
+  },
+  username: {
+    fontSize: 16,
+    color: '#fff',
   },
 });
 
