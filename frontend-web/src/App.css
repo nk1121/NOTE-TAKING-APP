@@ -312,6 +312,7 @@ body[data-theme="dark"] .tag-input::placeholder {
   background: white;
   border-radius: 10px;
   margin-bottom: 20px;
+  padding: 16px;
 }
 
 .note-title {
@@ -325,12 +326,55 @@ body[data-theme="dark"] .tag-input::placeholder {
 
 .note-content {
   width: 100%;
-  min-height: 150px;
+  min-height: 200px;
+  display: block !important; /* Ensure the editor container is always visible */
+}
+
+/* Updated editor styles to ensure proper rendering and prevent collapsing */
+.note-editor .ql-toolbar {
+  display: block !important;
+  border: 1px solid #ccc;
+  border-bottom: none;
+  background-color: #f8f9fa;
   padding: 8px;
+  border-top-left-radius: 4px;
+  border-top-right-radius: 4px;
+}
+
+body[data-theme="dark"] .note-editor .ql-toolbar {
+  background-color: #343a40;
+  border-color: #6c757d;
+}
+
+.note-editor .ql-container {
+  border: 1px solid #ccc !important;
+  border-top: none !important;
+  min-height: 200px;
+  font-size: 16px;
+  border-bottom-left-radius: 4px;
+  border-bottom-right-radius: 4px;
+  display: block !important; /* Ensure the container is always visible */
+}
+
+body[data-theme="dark"] .note-editor .ql-container {
+  border-color: #6c757d !important;
 }
 
 .note-content .ql-editor {
-  min-height: 150px;
+  min-height: 200px;
+  padding: 12px;
+  display: block !important; /* Ensure the editor content area is always visible */
+}
+
+/* Ensure the editor is editable */
+.note-content .ql-editor[contenteditable="true"] {
+  background-color: #fff;
+  color: #000;
+}
+
+body[data-theme="dark"] .note-content .ql-editor[contenteditable="true"] {
+  background-color: #495057;
+  color: #f8f9fa;
 }
 
 .note-item {
@@ -475,4 +519,57 @@ body[data-theme="dark"] .profile-input {
   padding: 0.3rem;
   margin-bottom: 0.4rem;
   border-radius: 8px;
+}
+
+/* Style the Cross-Reference button in the toolbar */
+.ql-cross-reference {
+  background-color: #007bff !important;
+  color: white !important;
+  border-radius: 3px;
+  padding: 2px 6px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.ql-cross-reference:hover {
+  background-color: #0056b3 !important;
+}
+
+/* Style for cross-reference links in the editor */
+.note-content .ql-editor [style*="background-color: rgb(230, 243, 255)"] {
+  background-color: #e6f3ff !important;
+  color: #0056b3 !important;
+  padding: 2px 4px;
+  border-radius: 3px;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+body[data-theme="dark"] .note-content .ql-editor [style*="background-color: rgb(230, 243, 255)"] {
+  background-color: #1a3c5e !important;
+  color: #66b0ff !important;
+}
+
+/* Style for cross-reference links in the notes list */
+.cross-reference-link {
+  background-color: #e6f3ff;
+  color: #0056b3;
+  padding: 2px 4px;
+  border-radius: 3px;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+body[data-theme="dark"] .cross-reference-link {
+  background-color: #1a3c5e;
+  color: #66b0ff;
+}
+
+.cross-reference-link:hover {
+  background-color: #cce5ff;
+  text-decoration: underline;
+}
+
+body[data-theme="dark"] .cross-reference-link:hover {
+  background-color: #2a5a8e;
 }

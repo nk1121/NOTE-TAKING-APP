@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate, Link } from 'react-router-dom';
-import { Navbar, Nav, Form, FormControl, Button, Alert, Spinner } from 'react-bootstrap';
+import { Navbar, Nav, Form, FormControl, Button, Alert, Spinner, Modal, Dropdown } from 'react-bootstrap'; // Add Dropdown import
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSave, faEdit, faTrash, faUser, faFileExport, faCloud, faSearch, faPlay, faPause, faRedo, faStar as faStarSolid, faVolumeUp, faStop, faSignOutAlt, faChevronDown, faChevronRight, faPen, faStickyNote, faStar, faClock } from '@fortawesome/free-solid-svg-icons';
+import { faSave, faEdit, faTrash, faUser, faCloud, faSearch, faPlay, faPause, faRedo, faStar as faStarSolid, faVolumeUp, faStop, faSignOutAlt, faChevronDown, faChevronRight, faPen, faStickyNote, faStar, faClock, faInfoCircle, faFileExport } from '@fortawesome/free-solid-svg-icons';
 import { faStar as faStarRegular } from '@fortawesome/free-regular-svg-icons';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import DOMPurify from 'dompurify';
+import { jsPDF } from 'jspdf';
 import SplashScreen from './components/SplashScreen';
 import LoginPage from './components/LoginPage';
 import RegisterPage from './components/RegisterPage';
@@ -23,6 +24,7 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
   const [tags, setTags] = useState([]);
   const [tagInput, setTagInput] = useState('');
   const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [editingNoteId, setEditingNoteId] = useState(null);
   const [currentView, setCurrentView] = useState('write');
@@ -30,6 +32,10 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [speakingNoteId, setSpeakingNoteId] = useState(null);
   const [isTagsExpanded, setIsTagsExpanded] = useState(true);
+  const [showCrossReferenceModal, setShowCrossReferenceModal] = useState(false);
+  const [crossReferenceId, setCrossReferenceId] = useState('');
+  const [isFavorite, setIsFavorite] = useState(false);
+  const quillRef = useRef(null);
 
   const colorPalette = [
     '#D4EFDF', '#FFFFCC', '#FFD1DC', '#E6E6FA', '#E0F7FA',
@@ -38,35 +44,35 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
     '#FFFFFF', '#D3D3D3', '#808080', '#000000', '#2F4F4F',
   ];
 
+  const toolbarContainer = [
+    [{ 'header': [1, 2, 3, false] }],
+    ['bold', 'italic', 'strike'],
+    [{ 'color': colorPalette }, { 'background': colorPalette }],
+    ['link', 'code', 'code-block'],
+    [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+    ['blockquote'],
+    [{ 'script': 'sub' }, { 'script': 'super' }],
+    [{ 'align': [] }],
+    ['clean'],
+    ['cross-reference'],
+  ];
+
   const quillModules = {
-    toolbar: [
-      [{ 'header': [1, 2, 3, false] }],
-      ['bold', 'italic', 'strike'],
-      [{ 'color': colorPalette }, { 'background': colorPalette }],
-      ['link', 'code', 'code-block'],
-      [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-      ['blockquote'],
-      [{ 'script': 'sub' }, { 'script': 'super' }],
-      [{ 'align': [] }],
-      ['clean'],
-    ],
+    toolbar: {
+      container: toolbarContainer,
+      handlers: {
+        'cross-reference': function () {
+          console.log('Cross-Reference button clicked');
+          setShowCrossReferenceModal(true);
+        },
+      },
+    },
   };
 
   const quillFormats = [
-    'header',
-    'bold',
-    'italic',
-    'strike',
-    'color',
-    'background',
-    'link',
-    'code',
-    'code-block',
-    'list',
-    'bullet',
-    'blockquote',
-    'script',
-    'align',
+    'header', 'bold', 'italic', 'strike', 'color', 'background',
+    'link', 'code', 'code-block', 'list', 'bullet', 'blockquote',
+    'script', 'align',
   ];
 
   useEffect(() => {
@@ -80,9 +86,7 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
       if (!token) throw new Error('No authentication token found. Please log in again.');
 
       const response = await fetch('http://localhost:5000/notes', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
+        headers: { 'Authorization': `Bearer ${token}` },
       });
 
       if (!response.ok) {
@@ -91,7 +95,6 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
       }
 
       const data = await response.json();
-      // Convert all tags to uppercase when fetching notes
       const updatedData = data.map(note => ({
         ...note,
         tags: note.tags ? note.tags.map(tag => tag.toUpperCase()) : [],
@@ -109,10 +112,12 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
   const handleSaveNote = async () => {
     if (!title || !content) {
       setError('Please fill in both title and content.');
+      setSuccessMessage('');
       return;
     }
 
     setError('');
+    setSuccessMessage('');
     setLoading(true);
 
     try {
@@ -121,9 +126,6 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
 
       const method = editingNoteId ? 'PUT' : 'POST';
       const url = editingNoteId ? `http://localhost:5000/notes/${editingNoteId}` : 'http://localhost:5000/notes';
-      
-      
-      // Ensure tags are saved in uppercase
       const uppercaseTags = tags.map(tag => tag.toUpperCase());
       const response = await fetch(url, {
         method,
@@ -139,8 +141,19 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
         throw new Error(errorData.error || (editingNoteId ? 'Failed to update note' : 'Failed to create note'));
       }
 
+      const savedNote = await response.json();
+      if (!editingNoteId) {
+        setEditingNoteId(savedNote.id);
+      }
+
+      if (isFavorite && !favorites.includes(savedNote.id)) {
+        const updatedFavorites = [...favorites, savedNote.id];
+        setFavorites(updatedFavorites);
+        localStorage.setItem('favorites', JSON.stringify(updatedFavorites));
+      }
+
       await fetchNotes();
-      resetForm();
+      setSuccessMessage('Note saved successfully!');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -152,10 +165,8 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
     setEditingNoteId(note.id);
     setTitle(note.title);
     setContent(note.content);
-    
-    
-    // Tags are already uppercase from fetchNotes
     setTags(note.tags || []);
+    setIsFavorite(favorites.includes(note.id));
     setCurrentView('write');
   };
 
@@ -169,9 +180,7 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
 
       const response = await fetch(`http://localhost:5000/notes/${id}`, {
         method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
+        headers: { 'Authorization': `Bearer ${token}` },
       });
 
       if (!response.ok) {
@@ -198,15 +207,18 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
     }
     setFavorites(updatedFavorites);
     localStorage.setItem('favorites', JSON.stringify(updatedFavorites));
+    setIsFavorite(updatedFavorites.includes(id));
   };
 
   const toggleCurrentNoteFavorite = () => {
-    if (!editingNoteId) return;
-    toggleFavorite(editingNoteId);
+    if (editingNoteId) {
+      toggleFavorite(editingNoteId);
+    } else {
+      setIsFavorite(!isFavorite);
+    }
   };
 
   const handleTagInputChange = (e) => {
-    // Convert input to uppercase as the user types
     setTagInput(e.target.value.toUpperCase());
   };
 
@@ -215,7 +227,6 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
       e.preventDefault();
       const newTag = tagInput.trim();
       if (newTag && !tags.includes(newTag)) {
-        // Add the tag in uppercase
         setTags([...tags, newTag.toUpperCase()]);
       }
       setTagInput('');
@@ -233,6 +244,8 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
     setTags([]);
     setTagInput('');
     setError('');
+    setSuccessMessage('');
+    setIsFavorite(false);
     setCurrentView('write');
     setIsSpeaking(false);
     setSpeakingNoteId(null);
@@ -276,7 +289,105 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
     setSpeakingNoteId(noteId);
   };
 
-  // Convert tags to uppercase for the sidebar
+  const handleCrossReferenceSubmit = () => {
+    const noteId = parseInt(crossReferenceId);
+    if (!isNaN(noteId) && noteId > 0) {
+      const noteExists = notes.find(note => note.id === noteId);
+      if (noteExists) {
+        const quill = quillRef.current?.getEditor();
+        if (quill) {
+          const range = quill.getSelection(true);
+          if (range) {
+            const linkText = `[cross-ref:${noteId}]`;
+            quill.insertText(range.index, linkText);
+            quill.formatText(range.index, linkText.length, { 'color': '#0056b3', 'background': '#e6f3ff' });
+            setTimeout(() => {
+              quill.focus();
+              quill.setSelection(range.index + linkText.length, 0);
+            }, 0);
+          } else {
+            console.log('No selection found in the editor');
+            const length = quill.getLength();
+            const linkText = `[cross-ref:${noteId}]`;
+            quill.insertText(length - 1, linkText);
+            quill.formatText(length - 1, linkText.length, { 'color': '#0056b3', 'background': '#e6f3ff' });
+          }
+        } else {
+          console.log('Quill editor instance not found');
+        }
+        setCrossReferenceId('');
+        setShowCrossReferenceModal(false);
+      } else {
+        alert('Note ID does not exist. Please enter a valid ID.');
+      }
+    } else {
+      alert('Please enter a valid numeric Note ID.');
+    }
+  };
+
+  const renderContentWithCrossReferences = (content) => {
+    const div = document.createElement('div');
+    div.innerHTML = DOMPurify.sanitize(content);
+    let html = div.innerHTML;
+
+    html = html.replace(/\[cross-ref:(\d+)\]/g, (match, id) => {
+      const noteExists = notes.find(note => note.id === parseInt(id));
+      if (noteExists) {
+        return `<a href="#" class="cross-reference-link" data-note-id="${id}">${noteExists.title}</a>`;
+      }
+      return match;
+    });
+
+    return (
+      <div
+        dangerouslySetInnerHTML={{ __html: html }}
+        onClick={(e) => {
+          const target = e.target;
+          if (target.classList.contains('cross-reference-link')) {
+            e.preventDefault();
+            const noteId = parseInt(target.getAttribute('data-note-id'));
+            const note = notes.find(n => n.id === noteId);
+            if (note) {
+              handleEditNote(note);
+            }
+          }
+        }}
+      />
+    );
+  };
+
+  const showNoteId = (id) => {
+    alert(`Note ID: ${id}`);
+  };
+
+  const handleExportNote = (format) => {
+    if (!title || !content) {
+      setError('Please fill in both title and content to export.');
+      return;
+    }
+
+    const div = document.createElement('div');
+    div.innerHTML = DOMPurify.sanitize(content);
+    const plainText = div.innerText || div.textContent;
+
+    if (format === 'pdf') {
+      const doc = new jsPDF();
+      doc.setFontSize(16);
+      doc.text(title, 10, 10);
+      doc.setFontSize(12);
+      doc.text(plainText, 10, 20);
+      doc.save(`${title || 'note'}.pdf`);
+    } else if (format === 'text') {
+      const blob = new Blob([`Title: ${title}\n\n${plainText}`], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${title || 'note'}.txt`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+  };
+
   const allTags = [...new Set(notes.flatMap((note) => note.tags || []))];
 
   let displayedNotes = notes;
@@ -293,10 +404,7 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
     const div = document.createElement('div');
     div.innerHTML = DOMPurify.sanitize(content);
     const plainText = div.innerText || div.textContent;
-    if (plainText.length > 20) {
-      return plainText.substring(0, 20) + '...';
-    }
-    return plainText;
+    return plainText.length > 20 ? plainText.substring(0, 20) + '...' : plainText;
   };
 
   const toggleTagsSection = () => {
@@ -352,7 +460,6 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
           >
             <FontAwesomeIcon icon={faClock} className="mr-2" /> Recent
           </Nav.Link>
-          <Nav.Link href="#referenced" className="sidebar-item">Referenced</Nav.Link>
           <div className="tags-section">
             <h6 className="sidebar-item tags-header" onClick={toggleTagsSection}>
               Tags
@@ -381,11 +488,8 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
               </>
             )}
           </div>
-          <Nav.Link href="#export" className="sidebar-item text-purple">
-            <FontAwesomeIcon icon={faFileExport} className="mr-2" /> Export Notes
-          </Nav.Link>
           <Nav.Link href="#nextcloud" className="sidebar-item text-purple">
-            <FontAwesomeIcon icon={faCloud} className="mr-2" /> NextCloud Sync
+            <FontAwesomeIcon icon={faCloud} className="mr-1" /> NextCloud Sync
           </Nav.Link>
           <Nav.Link onClick={onLogout} className="sidebar-item mt-auto">
             <FontAwesomeIcon icon={faSignOutAlt} className="mr-2" /> Log Out
@@ -410,14 +514,20 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
                       className="note-title"
                     />
                     <ReactQuill
+                      ref={quillRef}
                       value={content}
-                      onChange={setContent}
+                      onChange={(newContent) => {
+                        console.log('Editor content changed:', newContent);
+                        setContent(newContent);
+                      }}
                       modules={quillModules}
                       formats={quillFormats}
                       className="note-content mt-2"
                       placeholder="Write your note here..."
+                      readOnly={false}
                     />
                     {error && <Alert variant="danger" className="mt-2">{error}</Alert>}
+                    {successMessage && <Alert variant="success" className="mt-2">{successMessage}</Alert>}
                     <div className="action-bar mt-2 d-flex align-items-center">
                       <div className="tags-input-container flex-grow-1 mr-2">
                         <div className="d-flex flex-wrap mb-1">
@@ -450,10 +560,27 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
                         size="sm"
                         className="mr-2"
                         onClick={toggleCurrentNoteFavorite}
-                        disabled={!editingNoteId}
                       >
-                        <FontAwesomeIcon icon={editingNoteId && favorites.includes(editingNoteId) ? faStarSolid : faStarRegular} />
+                        <FontAwesomeIcon icon={(editingNoteId && favorites.includes(editingNoteId)) || isFavorite ? faStarSolid : faStarRegular} />
                       </Button>
+                      <Dropdown>
+                        <Dropdown.Toggle
+                          variant="outline-info"
+                          size="sm"
+                          className="mr-2"
+                          id="exportDropdown"
+                        >
+                          <FontAwesomeIcon icon={faFileExport} />
+                        </Dropdown.Toggle>
+                        <Dropdown.Menu>
+                          <Dropdown.Item onClick={() => handleExportNote('pdf')}>
+                            Export as PDF
+                          </Dropdown.Item>
+                          <Dropdown.Item onClick={() => handleExportNote('text')}>
+                            Export as Text
+                          </Dropdown.Item>
+                        </Dropdown.Menu>
+                      </Dropdown>
                       <Button variant="primary" onClick={handleSaveNote} className="save-button" disabled={loading}>
                         {loading ? <Spinner animation="border" size="sm" /> : <FontAwesomeIcon icon={faSave} className="mr-2" />}
                         {editingNoteId ? 'Update Note' : 'Save Note'}
@@ -472,7 +599,7 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
                         <div className="d-flex justify-content-between">
                           <div>
                             <h5>{note.title}</h5>
-                            <p>{truncateContent(note.content)}</p>
+                            {renderContentWithCrossReferences(note.content)}
                             <div>
                               {note.tags && note.tags.map((tag) => (
                                 <span key={tag} className="badge badge-black mr-1">{tag}</span>
@@ -510,9 +637,19 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
                             <Button
                               variant="outline-danger"
                               size="sm"
+                              className="mr-1"
                               onClick={() => handleDeleteNote(note.id)}
                             >
                               <FontAwesomeIcon icon={faTrash} />
+                            </Button>
+                            <Button
+                              variant="outline-info"
+                              size="sm"
+                              className="mr-1"
+                              onClick={() => showNoteId(note.id)}
+                              title="Show Note ID"
+                            >
+                              <FontAwesomeIcon icon={faInfoCircle} />
                             </Button>
                           </div>
                         </div>
@@ -526,6 +663,34 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
           </Routes>
         </div>
       </div>
+
+      <Modal show={showCrossReferenceModal} onHide={() => setShowCrossReferenceModal(false)}>
+        <Modal.Header closeButton>
+          <Modal.Title>Insert Cross-Reference</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form>
+            <Form.Group controlId="crossReferenceId">
+              <Form.Label>Enter Note ID to Link</Form.Label>
+              <FormControl
+                type="number"
+                value={crossReferenceId}
+                onChange={(e) => setCrossReferenceId(e.target.value)}
+                placeholder="e.g., 123"
+                min="1"
+              />
+            </Form.Group>
+          </Form>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowCrossReferenceModal(false)}>
+            Cancel
+          </Button>
+          <Button variant="primary" onClick={handleCrossReferenceSubmit}>
+            Insert Link
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </div>
   );
 };
