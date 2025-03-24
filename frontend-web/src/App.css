@@ -97,17 +97,20 @@ body[data-theme="dark"] .ql-color-picker .ql-picker-item {
   display: flex;
   align-items: center;
   gap: 10px;
+  margin-top: 10px;
 }
 
 /* Style the tags input */
 .tags-input-container {
   margin-top: 10px;
+  flex-grow: 1;
 }
 
 .tag-input {
   border-radius: 5px;
   padding: 5px;
   font-size: 0.9rem;
+  width: 100%;
 }
 
 body[data-theme="dark"] .tag-input {
@@ -123,7 +126,7 @@ body[data-theme="dark"] .tag-input::placeholder {
 /* Style the tags section in the sidebar */
 .tags-section {
   margin-bottom: 1rem;
-  transition: all 0.3s ease; /* Smooth transition for expanding/collapsing */
+  transition: all 0.3s ease;
 }
 
 .tags-section h6 {
@@ -313,6 +316,10 @@ body[data-theme="dark"] .tag-input::placeholder {
   border-radius: 10px;
   margin-bottom: 20px;
   padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 400px; /* Ensure the editor container has a minimum height */
 }
 
 .note-title {
@@ -322,15 +329,21 @@ body[data-theme="dark"] .tag-input::placeholder {
   font-weight: bold;
   padding: 8px;
   border-bottom: 1px solid #ddd;
+  outline: none;
+}
+
+.note-title:focus {
+  border-bottom: 1px solid #007bff;
 }
 
 .note-content {
   width: 100%;
-  min-height: 200px;
-  display: block !important; /* Ensure the editor container is always visible */
+  flex: 1; /* Allow the editor to grow and fill available space */
+  display: flex;
+  flex-direction: column;
 }
 
-/* Updated editor styles to ensure proper rendering and prevent collapsing */
+/* Ensure the Quill toolbar is styled properly */
 .note-editor .ql-toolbar {
   display: block !important;
   border: 1px solid #ccc;
@@ -346,27 +359,32 @@ body[data-theme="dark"] .note-editor .ql-toolbar {
   border-color: #6c757d;
 }
 
+/* Ensure the Quill container has a proper height and border */
 .note-editor .ql-container {
   border: 1px solid #ccc !important;
   border-top: none !important;
+  flex: 1; /* Allow the container to grow and fill available space */
   min-height: 200px;
   font-size: 16px;
   border-bottom-left-radius: 4px;
   border-bottom-right-radius: 4px;
-  display: block !important; /* Ensure the container is always visible */
+  display: block !important;
 }
 
 body[data-theme="dark"] .note-editor .ql-container {
   border-color: #6c757d !important;
 }
 
+/* Ensure the Quill editor (editable area) has a proper height */
 .note-content .ql-editor {
   min-height: 200px;
+  height: 100%; /* Ensure the editor fills the container */
   padding: 12px;
-  display: block !important; /* Ensure the editor content area is always visible */
+  display: block !important;
+  overflow-y: auto;
 }
 
-/* Ensure the editor is editable */
+/* Ensure the editor is editable and styled correctly */
 .note-content .ql-editor[contenteditable="true"] {
   background-color: #fff;
   color: #000;
@@ -521,55 +539,44 @@ body[data-theme="dark"] .profile-input {
   border-radius: 8px;
 }
 
-/* Style the Cross-Reference button in the toolbar */
-.ql-cross-reference {
-  background-color: #007bff !important;
-  color: white !important;
-  border-radius: 3px;
-  padding: 2px 6px;
-  font-size: 12px;
-  font-weight: 500;
+/* Splash Screen Styles */
+.splash-screen {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background-color: #f8f9fa; /* Light background for light theme */
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 9999;
 }
 
-.ql-cross-reference:hover {
-  background-color: #0056b3 !important;
+body[data-theme="dark"] .splash-screen {
+  background-color: #212529; /* Dark background for dark theme */
 }
 
-/* Style for cross-reference links in the editor */
-.note-content .ql-editor [style*="background-color: rgb(230, 243, 255)"] {
-  background-color: #e6f3ff !important;
-  color: #0056b3 !important;
-  padding: 2px 4px;
-  border-radius: 3px;
-  cursor: pointer;
-  text-decoration: none;
+.splash-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: #212529;
 }
 
-body[data-theme="dark"] .note-content .ql-editor [style*="background-color: rgb(230, 243, 255)"] {
-  background-color: #1a3c5e !important;
-  color: #66b0ff !important;
+body[data-theme="dark"] .splash-content {
+  color: #f8f9fa;
 }
 
-/* Style for cross-reference links in the notes list */
-.cross-reference-link {
-  background-color: #e6f3ff;
-  color: #0056b3;
-  padding: 2px 4px;
-  border-radius: 3px;
-  text-decoration: none;
-  font-weight: 500;
+.splash-content h1 {
+  font-size: 2rem;
+  margin-bottom: 1rem;
 }
 
-body[data-theme="dark"] .cross-reference-link {
-  background-color: #1a3c5e;
-  color: #66b0ff;
+.splash-content p {
+  font-size: 1rem;
+  margin-top: 1rem;
 }
 
-.cross-reference-link:hover {
-  background-color: #cce5ff;
-  text-decoration: underline;
-}
-
-body[data-theme="dark"] .cross-reference-link:hover {
-  background-color: #2a5a8e;
-}

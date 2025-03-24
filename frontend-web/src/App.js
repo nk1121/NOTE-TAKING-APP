@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, memo } from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate, Link } from 'react-router-dom';
-import { Navbar, Nav, Form, FormControl, Button, Alert, Spinner, Modal, Dropdown } from 'react-bootstrap'; // Add Dropdown import
+import { Navbar, Nav, Form, FormControl, Button, Alert, Spinner, Dropdown } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSave, faEdit, faTrash, faUser, faCloud, faSearch, faPlay, faPause, faRedo, faStar as faStarSolid, faVolumeUp, faStop, faSignOutAlt, faChevronDown, faChevronRight, faPen, faStickyNote, faStar, faClock, faInfoCircle, faFileExport } from '@fortawesome/free-solid-svg-icons';
 import { faStar as faStarRegular } from '@fortawesome/free-regular-svg-icons';
@@ -15,6 +15,15 @@ import ForgotPasswordPage from './components/ForgotPasswordPage';
 import ResetPasswordPage from './components/ResetPasswordPage';
 import ProfilePage from './components/ProfilePage';
 import './App.css';
+
+// Memoize the React Quill component to prevent unnecessary re-renders
+const MemoizedReactQuill = memo(ReactQuill, (prevProps, nextProps) => {
+  return (
+    prevProps.value === nextProps.value &&
+    prevProps.readOnly === nextProps.readOnly &&
+    prevProps.placeholder === nextProps.placeholder
+  );
+});
 
 const MainApp = ({ onLogout, toggleTheme, theme }) => {
   const [notes, setNotes] = useState([]);
@@ -32,8 +41,6 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [speakingNoteId, setSpeakingNoteId] = useState(null);
   const [isTagsExpanded, setIsTagsExpanded] = useState(true);
-  const [showCrossReferenceModal, setShowCrossReferenceModal] = useState(false);
-  const [crossReferenceId, setCrossReferenceId] = useState('');
   const [isFavorite, setIsFavorite] = useState(false);
   const quillRef = useRef(null);
 
@@ -54,18 +61,11 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
     [{ 'script': 'sub' }, { 'script': 'super' }],
     [{ 'align': [] }],
     ['clean'],
-    ['cross-reference'],
   ];
 
   const quillModules = {
     toolbar: {
       container: toolbarContainer,
-      handlers: {
-        'cross-reference': function () {
-          console.log('Cross-Reference button clicked');
-          setShowCrossReferenceModal(true);
-        },
-      },
     },
   };
 
@@ -289,73 +289,6 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
     setSpeakingNoteId(noteId);
   };
 
-  const handleCrossReferenceSubmit = () => {
-    const noteId = parseInt(crossReferenceId);
-    if (!isNaN(noteId) && noteId > 0) {
-      const noteExists = notes.find(note => note.id === noteId);
-      if (noteExists) {
-        const quill = quillRef.current?.getEditor();
-        if (quill) {
-          const range = quill.getSelection(true);
-          if (range) {
-            const linkText = `[cross-ref:${noteId}]`;
-            quill.insertText(range.index, linkText);
-            quill.formatText(range.index, linkText.length, { 'color': '#0056b3', 'background': '#e6f3ff' });
-            setTimeout(() => {
-              quill.focus();
-              quill.setSelection(range.index + linkText.length, 0);
-            }, 0);
-          } else {
-            console.log('No selection found in the editor');
-            const length = quill.getLength();
-            const linkText = `[cross-ref:${noteId}]`;
-            quill.insertText(length - 1, linkText);
-            quill.formatText(length - 1, linkText.length, { 'color': '#0056b3', 'background': '#e6f3ff' });
-          }
-        } else {
-          console.log('Quill editor instance not found');
-        }
-        setCrossReferenceId('');
-        setShowCrossReferenceModal(false);
-      } else {
-        alert('Note ID does not exist. Please enter a valid ID.');
-      }
-    } else {
-      alert('Please enter a valid numeric Note ID.');
-    }
-  };
-
-  const renderContentWithCrossReferences = (content) => {
-    const div = document.createElement('div');
-    div.innerHTML = DOMPurify.sanitize(content);
-    let html = div.innerHTML;
-
-    html = html.replace(/\[cross-ref:(\d+)\]/g, (match, id) => {
-      const noteExists = notes.find(note => note.id === parseInt(id));
-      if (noteExists) {
-        return `<a href="#" class="cross-reference-link" data-note-id="${id}">${noteExists.title}</a>`;
-      }
-      return match;
-    });
-
-    return (
-      <div
-        dangerouslySetInnerHTML={{ __html: html }}
-        onClick={(e) => {
-          const target = e.target;
-          if (target.classList.contains('cross-reference-link')) {
-            e.preventDefault();
-            const noteId = parseInt(target.getAttribute('data-note-id'));
-            const note = notes.find(n => n.id === noteId);
-            if (note) {
-              handleEditNote(note);
-            }
-          }
-        }}
-      />
-    );
-  };
-
   const showNoteId = (id) => {
     alert(`Note ID: ${id}`);
   };
@@ -513,7 +446,7 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
                       onChange={(e) => setTitle(e.target.value)}
                       className="note-title"
                     />
-                    <ReactQuill
+                    <MemoizedReactQuill
                       ref={quillRef}
                       value={content}
                       onChange={(newContent) => {
@@ -525,6 +458,7 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
                       className="note-content mt-2"
                       placeholder="Write your note here..."
                       readOnly={false}
+                      preserveWhitespace
                     />
                     {error && <Alert variant="danger" className="mt-2">{error}</Alert>}
                     {successMessage && <Alert variant="success" className="mt-2">{successMessage}</Alert>}
@@ -599,7 +533,7 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
                         <div className="d-flex justify-content-between">
                           <div>
                             <h5>{note.title}</h5>
-                            {renderContentWithCrossReferences(note.content)}
+                            <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(note.content) }} />
                             <div>
                               {note.tags && note.tags.map((tag) => (
                                 <span key={tag} className="badge badge-black mr-1">{tag}</span>
@@ -663,34 +597,6 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
           </Routes>
         </div>
       </div>
-
-      <Modal show={showCrossReferenceModal} onHide={() => setShowCrossReferenceModal(false)}>
-        <Modal.Header closeButton>
-          <Modal.Title>Insert Cross-Reference</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <Form>
-            <Form.Group controlId="crossReferenceId">
-              <Form.Label>Enter Note ID to Link</Form.Label>
-              <FormControl
-                type="number"
-                value={crossReferenceId}
-                onChange={(e) => setCrossReferenceId(e.target.value)}
-                placeholder="e.g., 123"
-                min="1"
-              />
-            </Form.Group>
-          </Form>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowCrossReferenceModal(false)}>
-            Cancel
-          </Button>
-          <Button variant="primary" onClick={handleCrossReferenceSubmit}>
-            Insert Link
-          </Button>
-        </Modal.Footer>
-      </Modal>
     </div>
   );
 };
