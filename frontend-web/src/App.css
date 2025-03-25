@@ -1,3 +1,4 @@
+/* General styles for light and dark themes */
 body[data-theme="light"] {
   background-color: #f8f9fa;
   color: #212529;
@@ -8,122 +9,129 @@ body[data-theme="dark"] {
   color: #f8f9fa;
 }
 
-body[data-theme="dark"] .card {
-  background-color: #343a40;
-  color: #f8f9fa;
+/* Main app layout */
+.main-app {
+  display: flex;
+  min-height: calc(100vh - 56px);
 }
 
-body[data-theme="dark"] .note-editor,
-body[data-theme="dark"] .note-item {
-  background-color: #343a40;
-  color: #f8f9fa;
+/* App container */
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
 }
 
-body[data-theme="dark"] .note-title {
-  background-color: #495057;
-  color: #f8f9fa;
+.app-content {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
 }
 
-body[data-theme="dark"] .ql-container,
-body[data-theme="dark"] .ql-editor {
-  background-color: #495057;
-  color: #f8f9fa;
+/* Content area */
+.content {
+  flex-grow: 1;
+  padding: 20px;
+  background: #f8f9fa;
 }
 
-body[data-theme="dark"] .ql-toolbar {
-  background-color: #343a40;
-  border-color: #6c757d;
+body[data-theme="dark"] .content {
+  background: #212529;
 }
 
-body[data-theme="dark"] .ql-picker-label,
-body[data-theme="dark"] .ql-picker-item {
-  color: #f8f9fa;
-}
-
-body[data-theme="dark"] .ql-picker-options {
-  background-color: #343a40;
-  border-color: #6c757d;
-}
-
-body[data-theme="dark"] .ql-editor::placeholder {
-  color: #adb5bd;
+/* Sidebar */
+.sidebar {
+  width: 200px;
+  background: #2c3e50;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  padding-top: 10px;
+  overflow-y: auto;
+  min-height: calc(100vh - 56px);
 }
 
 body[data-theme="dark"] .sidebar {
   background-color: #1a1a1a;
 }
 
+.sidebar-main {
+  flex-grow: 1;
+  list-style: none;
+  padding: 0;
+}
+
+.sidebar-footer {
+  list-style: none;
+  padding: 0;
+  margin-top: auto;
+}
+
+.sidebar-main li,
+.sidebar-footer li {
+  cursor: pointer;
+  padding: 10px;
+  color: white;
+  border-radius: 5px;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.sidebar-main li:hover,
+.sidebar-footer li:hover {
+  background: #34495e;
+}
+
+.sidebar-main li.active,
+.sidebar-footer li.active {
+  background: #34495e;
+}
+
+.sidebar ul {
+  list-style: none;
+  padding: 0;
+}
+
+.sidebar li {
+  cursor: pointer;
+  padding: 10px;
+  color: white;
+  border-radius: 5px;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.sidebar li:hover {
+  background: #34495e;
+}
+
+.sidebar li.active {
+  background: #34495e;
+}
+
+.sidebar-item {
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 5px;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
 body[data-theme="dark"] .sidebar-item {
   color: #f8f9fa;
 }
 
-body[data-theme="dark"] .badge-light {
-  background-color: #495057;
-  color: #f8f9fa;
+.sidebar-item:hover {
+  background: #34495e;
 }
 
-body[data-theme="dark"] .form-control {
-  background-color: #495057;
-  color: #f8f9fa;
-  border-color: #6c757d;
+.sidebar-item.active {
+  background: #34495e;
 }
 
-body[data-theme="dark"] .form-control::placeholder {
-  color: #adb5bd;
-}
-
-body[data-theme="dark"] .form-label {
-  color: #f8f9fa;
-}
-
-body[data-theme="dark"] .invalid-feedback {
-  color: #ff6b6b;
-}
-
-/* Style the color picker swatches */
-.ql-color-picker .ql-picker-item {
-  width: 20px;
-  height: 20px;
-  margin: 2px;
-  border: 1px solid #ccc;
-}
-
-body[data-theme="dark"] .ql-color-picker .ql-picker-item {
-  border-color: #6c757d;
-}
-
-/* Style the action bar */
-.action-bar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 10px;
-}
-
-/* Style the tags input */
-.tags-input-container {
-  margin-top: 10px;
-  flex-grow: 1;
-}
-
-.tag-input {
-  border-radius: 5px;
-  padding: 5px;
-  font-size: 0.9rem;
-  width: 100%;
-}
-
-body[data-theme="dark"] .tag-input {
-  background-color: #495057;
-  color: #f8f9fa;
-  border-color: #6c757d;
-}
-
-body[data-theme="dark"] .tag-input::placeholder {
-  color: #adb5bd;
-}
-
-/* Style the tags section in the sidebar */
+/* Tags section in the sidebar */
 .tags-section {
   margin-bottom: 1rem;
   transition: all 0.3s ease;
@@ -139,172 +147,24 @@ body[data-theme="dark"] .tag-input::placeholder {
   font-size: 0.85rem;
 }
 
-/* Change tag color to black */
-.badge-black {
-  background-color: #000 !important;
-  color: #fff !important;
-  font-size: 0.75rem;
-  padding: 0.25rem 0.5rem;
-  border-radius: 0.25rem;
-}
-
-/* Style for the tags section header */
 .tags-header {
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  font-weight: bold;
+  margin-top: 10px;
 }
 
 .tags-header:hover {
   background: rgba(0, 0, 0, 0.1);
 }
 
-/* Ensure tags list has some padding when expanded */
 .tags-section .sidebar-item.small {
   padding-left: 1.5rem;
 }
 
-.app {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  overflow: hidden;
-}
-
-.app-content {
-  display: flex;
-  flex: 1;
-  overflow: hidden;
-}
-
-.navbar {
-  padding: 0.5rem 1rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.navbar-content {
-  display: flex;
-  align-items: center;
-  width: 100%;
-}
-
-.app-title-container {
-  width: 200px;
-  display: flex;
-  justify-content: center;
-}
-
-.app-title {
-  font-size: 1.25rem;
-  font-weight: 600;
-  margin: 0;
-}
-
-.search-container-wrapper {
-  flex: 1;
-  display: flex;
-  justify-content: flex-start;
-  padding-left: 1rem;
-}
-
-.search-form {
-  width: 100%;
-  max-width: 400px;
-  margin: 0;
-}
-
-.search-container {
-  position: relative;
-  display: flex;
-  align-items: center;
-  width: 100%;
-}
-
-.search-icon {
-  position: absolute;
-  left: 10px;
-  color: #adb5bd;
-  font-size: 0.9rem;
-}
-
-.search-input {
-  border-radius: 20px;
-  padding-left: 30px;
-  background-color: #343a40;
-  border: none;
-  color: #f8f9fa;
-  font-size: 0.9rem;
-  height: 32px;
-  width: 100%;
-}
-
-.search-input::placeholder {
-  color: #adb5bd;
-}
-
-.search-input:focus {
-  background-color: #343a40;
-  color: #f8f9fa;
-  box-shadow: none;
-  border: none;
-}
-
-.timer-controls {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-right: 1rem;
-}
-
-.timer {
-  font-size: 0.9rem;
-  color: #f8f9fa;
-  margin: 0 0.5rem;
-}
-
-.timer-button {
-  background: transparent;
-  border: 1px solid #6c757d;
-  color: #f8f9fa;
-  padding: 0.2rem 0.5rem;
-  font-size: 0.9rem;
-}
-
-.timer-button:hover {
-  background: #495057;
-  border-color: #6c757d;
-  color: #f8f9fa;
-}
-
-.sidebar {
-  width: 200px;
-  background: #2c3e50;
-  color: white;
-  display: flex;
-  flex-direction: column;
-  padding: 1rem;
-  overflow-y: auto;
-}
-
-.sidebar-item {
-  color: white;
-  padding: 0.5rem 1rem;
-  border-radius: 5px;
-  margin-bottom: 0.5rem;
-  font-size: 0.9rem;
-}
-
-.sidebar-item:hover {
-  background: #34495e;
-}
-
-.sidebar-item.active {
-  background: #34495e;
-}
-
+/* Note editor */
 .note-editor-container {
   flex: 1;
   overflow-y: auto;
@@ -319,7 +179,12 @@ body[data-theme="dark"] .tag-input::placeholder {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  min-height: 400px; /* Ensure the editor container has a minimum height */
+  min-height: 400px;
+}
+
+body[data-theme="dark"] .note-editor {
+  background-color: #343a40;
+  color: #f8f9fa;
 }
 
 .note-title {
@@ -330,20 +195,39 @@ body[data-theme="dark"] .tag-input::placeholder {
   padding: 8px;
   border-bottom: 1px solid #ddd;
   outline: none;
+  background: #fff;
+}
+
+body[data-theme="dark"] .note-title {
+  background-color: #495057;
+  color: #f8f9fa;
+  border-bottom: 1px solid #6c757d;
 }
 
 .note-title:focus {
   border-bottom: 1px solid #007bff;
 }
 
+body[data-theme="dark"] .note-title:focus {
+  border-bottom: 1px solid #66b0ff;
+}
+
+.note-title::placeholder {
+  color: #adb5bd;
+}
+
+body[data-theme="dark"] .note-title::placeholder {
+  color: #adb5bd;
+}
+
 .note-content {
   width: 100%;
-  flex: 1; /* Allow the editor to grow and fill available space */
+  flex: 1;
   display: flex;
   flex-direction: column;
 }
 
-/* Ensure the Quill toolbar is styled properly */
+/* React Quill editor styles */
 .note-editor .ql-toolbar {
   display: block !important;
   border: 1px solid #ccc;
@@ -359,11 +243,10 @@ body[data-theme="dark"] .note-editor .ql-toolbar {
   border-color: #6c757d;
 }
 
-/* Ensure the Quill container has a proper height and border */
 .note-editor .ql-container {
   border: 1px solid #ccc !important;
   border-top: none !important;
-  flex: 1; /* Allow the container to grow and fill available space */
+  flex: 1;
   min-height: 200px;
   font-size: 16px;
   border-bottom-left-radius: 4px;
@@ -373,31 +256,95 @@ body[data-theme="dark"] .note-editor .ql-toolbar {
 
 body[data-theme="dark"] .note-editor .ql-container {
   border-color: #6c757d !important;
-}
-
-/* Ensure the Quill editor (editable area) has a proper height */
-.note-content .ql-editor {
-  min-height: 200px;
-  height: 100%; /* Ensure the editor fills the container */
-  padding: 12px;
-  display: block !important;
-  overflow-y: auto;
-}
-
-/* Ensure the editor is editable and styled correctly */
-.note-content .ql-editor[contenteditable="true"] {
-  background-color: #fff;
-  color: #000;
-}
-
-body[data-theme="dark"] .note-content .ql-editor[contenteditable="true"] {
   background-color: #495057;
   color: #f8f9fa;
 }
 
-.note-item {
-  background: white;
-  border-radius: 10px;
+.note-content .ql-editor {
+  min-height: 200px;
+  height: 100%;
+  padding: 12px;
+  display: block !important;
+  overflow-y: auto;
+  background-color: #fff;
+  color: #000;
+}
+
+body[data-theme="dark"] .note-content .ql-editor {
+  background-color: #495057;
+  color: #f8f9fa;
+}
+
+body[data-theme="dark"] .ql-editor::placeholder {
+  color: #adb5bd;
+}
+
+body[data-theme="dark"] .ql-picker-label,
+body[data-theme="dark"] .ql-picker-item {
+  color: #f8f9fa;
+}
+
+body[data-theme="dark"] .ql-picker-options {
+  background-color: #343a40;
+  border-color: #6c757d;
+}
+
+body[data-theme="dark"] .ql-snow .ql-stroke {
+  stroke: #f8f9fa;
+}
+
+body[data-theme="dark"] .ql-snow .ql-fill {
+  fill: #f8f9fa;
+}
+
+/* Color picker swatches */
+.ql-color-picker .ql-picker-item {
+  width: 20px;
+  height: 20px;
+  margin: 2px;
+  border: 1px solid #ccc;
+}
+
+body[data-theme="dark"] .ql-color-picker .ql-picker-item {
+  border-color: #6c757d;
+}
+
+/* Action bar */
+.action-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+body[data-theme="dark"] .action-bar .btn-outline-primary {
+  color: #66b0ff;
+  border-color: #66b0ff;
+}
+
+body[data-theme="dark"] .action-bar .btn-outline-primary:hover {
+  background: #66b0ff;
+  color: #fff;
+}
+
+body[data-theme="dark"] .action-bar .btn-outline-warning {
+  color: #ffca28;
+  border-color: #ffca28;
+}
+
+body[data-theme="dark"] .action-bar .btn-outline-warning:hover {
+  background: #ffca28;
+  color: #fff;
+}
+
+body[data-theme="dark"] .action-bar .btn-outline-info {
+  color: #4dd0e1;
+  border-color: #4dd0e1;
+}
+
+body[data-theme="dark"] .action-bar .btn-outline-info:hover {
+  background: #4dd0e1;
+  color: #fff;
 }
 
 .save-button {
@@ -405,10 +352,98 @@ body[data-theme="dark"] .note-content .ql-editor[contenteditable="true"] {
   border: none;
 }
 
+body[data-theme="dark"] .save-button {
+  background: #1976d2;
+  border-color: #1976d2;
+}
+
 .save-button:hover {
   background: #0056b3;
 }
 
+body[data-theme="dark"] .save-button:hover {
+  background: #1565c0;
+}
+
+/* Tags input */
+.tags-input-container {
+  margin-top: 10px;
+  flex-grow: 1;
+}
+
+.tag-input {
+  border-radius: 5px;
+  padding: 5px;
+  font-size: 0.9rem;
+  width: 100%;
+  border: 1px solid #dee2e6;
+  background: #fff;
+  color: #212529;
+}
+
+body[data-theme="dark"] .tag-input {
+  background-color: #495057;
+  color: #f8f9fa;
+  border-color: #6c757d;
+}
+
+body[data-theme="dark"] .tag-input::placeholder {
+  color: #adb5bd;
+}
+
+.badge-black {
+  background-color: #000 !important;
+  color: #fff !important;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+}
+
+body[data-theme="dark"] .badge-black {
+  background-color: #495057 !important;
+  color: #f8f9fa !important;
+}
+
+body[data-theme="dark"] .badge-light {
+  background-color: #495057;
+  color: #f8f9fa;
+}
+
+/* Notes list */
+.notes-list h2 {
+  margin-bottom: 20px;
+}
+
+.note-item {
+  background: white;
+  border-radius: 10px;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+body[data-theme="dark"] .note-item {
+  background-color: #343a40;
+  color: #f8f9fa;
+}
+
+.note-item h5 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+body[data-theme="dark"] .note-item h5 {
+  color: #f8f9fa;
+}
+
+.note-item .text-muted {
+  color: #6c757d;
+}
+
+body[data-theme="dark"] .note-item .text-muted {
+  color: #80deea; /* Changed to a light cyan for better visibility */
+}
+
+/* Profile page */
 .profile-page-container {
   flex: 1;
   background: #ffffff;
@@ -513,7 +548,16 @@ body[data-theme="dark"] .profile-input {
   outline: none;
 }
 
+body[data-theme="dark"] .profile-input:focus {
+  border-color: #66b0ff;
+  box-shadow: 0 0 0 0.2rem rgba(102, 176, 255, 0.25);
+}
+
 .profile-input::placeholder {
+  color: #adb5bd;
+}
+
+body[data-theme="dark"] .profile-input::placeholder {
   color: #adb5bd;
 }
 
@@ -527,9 +571,17 @@ body[data-theme="dark"] .profile-input {
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
+body[data-theme="dark"] .profile-button {
+  background: linear-gradient(45deg, #1976d2, #1565c0);
+}
+
 .profile-button:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
+}
+
+body[data-theme="dark"] .profile-button:hover {
+  box-shadow: 0 4px 15px rgba(25, 118, 210, 0.3);
 }
 
 .profile-alert {
@@ -539,13 +591,177 @@ body[data-theme="dark"] .profile-input {
   border-radius: 8px;
 }
 
-/* Splash Screen Styles */
+/* Form controls */
+.form-control {
+  background: #fff;
+  color: #212529;
+  border: 1px solid #dee2e6;
+}
+
+body[data-theme="dark"] .form-control {
+  background-color: #495057;
+  color: #f8f9fa;
+  border-color: #6c757d;
+}
+
+body[data-theme="dark"] .form-control::placeholder {
+  color: #adb5bd;
+}
+
+body[data-theme="dark"] .form-label {
+  color: #f8f9fa;
+}
+
+body[data-theme="dark"] .invalid-feedback {
+  color: #ff6b6b;
+}
+
+/* Alerts */
+body[data-theme="dark"] .alert-success {
+  background: #2e7d32;
+  color: #f8f9fa;
+}
+
+body[data-theme="dark"] .alert-danger {
+  background: #d32f2f;
+  color: #f8f9fa;
+}
+
+/* Navbar */
+.navbar {
+  padding: 0.5rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #2c3e50 !important;
+}
+
+.navbar-content {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.app-title-container {
+  width: 200px;
+  display: flex;
+  justify-content: center;
+}
+
+.app-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0;
+  color: #f8f9fa;
+}
+
+.search-container-wrapper {
+  flex: 1;
+  display: flex;
+  justify-content: flex-start;
+  padding-left: 1rem;
+}
+
+.search-form {
+  width: 100%;
+  max-width: 400px;
+  margin: 0;
+}
+
+.search-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.search-icon {
+  position: absolute;
+  left: 10px;
+  color: #adb5bd;
+  font-size: 0.9rem;
+}
+
+body[data-theme="dark"] .search-icon {
+  color: #adb5bd;
+}
+
+.search-input {
+  border-radius: 20px;
+  padding-left: 30px;
+  background-color: #343a40;
+  border: none;
+  color: #f8f9fa;
+  font-size: 0.9rem;
+  height: 32px;
+  width: 100%;
+}
+
+body[data-theme="dark"] .search-input {
+  background-color: #495057;
+  color: #f8f9fa;
+  border: 1px solid #6c757d;
+}
+
+.search-input::placeholder {
+  color: #adb5bd;
+}
+
+body[data-theme="dark"] .search-input::placeholder {
+  color: #adb5bd;
+}
+
+.search-input:focus {
+  background-color: #343a40;
+  color: #f8f9fa;
+  box-shadow: none;
+  border: none;
+}
+
+body[data-theme="dark"] .search-input:focus {
+  background-color: #495057;
+  border: 1px solid #66b0ff;
+}
+
+.timer-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-right: 1rem;
+}
+
+.timer {
+  font-size: 0.9rem;
+  color: #f8f9fa;
+  margin: 0 0.5rem;
+}
+
+.timer-button {
+  background: transparent;
+  border: 1px solid #6c757d;
+  color: #f8f9fa;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.9rem;
+}
+
+body[data-theme="dark"] .timer-button {
+  border-color: #6c757d;
+  color: #f8f9fa;
+}
+
+.timer-button:hover {
+  background: #495057;
+  border-color: #6c757d;
+  color: #f8f9fa;
+}
+
+/* Splash Screen */
 .splash-screen {
   display: flex;
   justify-content: center;
   align-items: center;
   height: 100vh;
-  background-color: #f8f9fa; /* Light background for light theme */
+  background-color: #f8f9fa;
   position: fixed;
   top: 0;
   left: 0;
@@ -554,7 +770,7 @@ body[data-theme="dark"] .profile-input {
 }
 
 body[data-theme="dark"] .splash-screen {
-  background-color: #212529; /* Dark background for dark theme */
+  background-color: #212529;
 }
 
 .splash-content {
@@ -580,3 +796,29 @@ body[data-theme="dark"] .splash-content {
   margin-top: 1rem;
 }
 
+/* General list and button styles */
+ul {
+  list-style: none;
+  padding: 0;
+}
+
+li {
+  margin: 10px 0;
+}
+
+button {
+  margin-left: 10px;
+}
+
+/* Card styles */
+.card {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+body[data-theme="dark"] .card {
+  background-color: #343a40;
+  color: #f8f9fa;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}

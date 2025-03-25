@@ -62,7 +62,7 @@ function verifyToken(req, res, next) {
 
 // ===== USER ROUTES =====
 
-// Registration route
+// Registration route (unchanged)
 app.post('/register', async (req, res) => {
   const { email, username, password, name, profile_picture, bio } = req.body;
   if (!email || !username || !password) {
@@ -74,7 +74,6 @@ app.post('/register', async (req, res) => {
   }
 
   try {
-    // Check for existing email and username
     const emailCheck = await dbPool.query('SELECT * FROM users WHERE email = $1', [email]);
     if (emailCheck.rows.length > 0) {
       return res.status(400).json({ error: 'Email already registered.' });
@@ -84,7 +83,6 @@ app.post('/register', async (req, res) => {
       return res.status(400).json({ error: 'Username already taken.' });
     }
 
-    // Hash password and store user details
     const hashedPwd = await bcrypt.hash(password, 10);
     const newUser = await dbPool.query(
       `INSERT INTO users (email, username, password, name, profile_picture, bio)
@@ -100,7 +98,7 @@ app.post('/register', async (req, res) => {
   }
 });
 
-// Login route
+// Login route (unchanged)
 app.post('/login', async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) {
@@ -132,7 +130,7 @@ app.post('/login', async (req, res) => {
   }
 });
 
-// Forgot password route
+// Forgot password route (unchanged)
 app.post('/forgot-password', async (req, res) => {
   const { email } = req.body;
   if (!email) {
@@ -177,7 +175,7 @@ app.post('/forgot-password', async (req, res) => {
   }
 });
 
-// Reset password route
+// Reset password route (unchanged)
 app.post('/reset-password', async (req, res) => {
   const { token, newPassword } = req.body;
   if (!token || !newPassword) {
@@ -207,7 +205,7 @@ app.post('/reset-password', async (req, res) => {
   }
 });
 
-// Change password route (requires login)
+// Change password route (unchanged)
 app.post('/change-password', verifyToken, async (req, res) => {
   const { currentPassword, newPassword } = req.body;
   if (!currentPassword || !newPassword) {
@@ -236,7 +234,7 @@ app.post('/change-password', verifyToken, async (req, res) => {
   }
 });
 
-// Profile retrieval route
+// Profile retrieval route (unchanged)
 app.get('/profile', verifyToken, async (req, res) => {
   try {
     const profileInfo = await dbPool.query(
@@ -253,7 +251,7 @@ app.get('/profile', verifyToken, async (req, res) => {
   }
 });
 
-// Profile update route
+// Profile update route (unchanged)
 app.put('/profile', verifyToken, async (req, res) => {
   const { email, username, name, profile_picture, bio } = req.body;
   if (!email || !username) {
@@ -287,7 +285,7 @@ app.put('/profile', verifyToken, async (req, res) => {
   }
 });
 
-// Delete account route
+// Delete account route (unchanged)
 app.delete('/delete-account', verifyToken, async (req, res) => {
   try {
     const deletedUser = await dbPool.query('DELETE FROM users WHERE id = $1 RETURNING id', [req.user.id]);
@@ -303,11 +301,11 @@ app.delete('/delete-account', verifyToken, async (req, res) => {
 
 // ===== NOTES ROUTES =====
 
-// Retrieve notes
+// Retrieve active notes (modified to exclude deleted notes)
 app.get('/notes', verifyToken, async (req, res) => {
   try {
     const notes = await dbPool.query(
-      'SELECT * FROM notes WHERE user_id = $1 ORDER BY updated_at DESC',
+      'SELECT * FROM notes WHERE user_id = $1 AND deleted_at IS NULL ORDER BY updated_at DESC',
       [req.user.id]
     );
     res.status(200).json(notes.rows);
@@ -317,7 +315,7 @@ app.get('/notes', verifyToken, async (req, res) => {
   }
 });
 
-// Create a new note
+// Create a new note (unchanged)
 app.post('/notes', verifyToken, async (req, res) => {
   const { title, content, tags } = req.body;
   if (!title || !content) {
@@ -326,8 +324,8 @@ app.post('/notes', verifyToken, async (req, res) => {
 
   try {
     const newNote = await dbPool.query(
-      `INSERT INTO notes (user_id, title, content, tags, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, NOW(), NOW())
+      `INSERT INTO notes (user_id, title, content, tags, created_at, updated_at, deleted_at)
+       VALUES ($1, $2, $3, $4, NOW(), NOW(), NULL)
        RETURNING *`,
       [req.user.id, title, content, tags || []]
     );
@@ -338,7 +336,7 @@ app.post('/notes', verifyToken, async (req, res) => {
   }
 });
 
-// Update an existing note
+// Update an existing note (modified to check deleted_at)
 app.put('/notes/:id', verifyToken, async (req, res) => {
   const { id } = req.params;
   const { title, content, tags } = req.body;
@@ -349,7 +347,7 @@ app.put('/notes/:id', verifyToken, async (req, res) => {
   try {
     const updatedNote = await dbPool.query(
       `UPDATE notes SET title = $1, content = $2, tags = $3, updated_at = NOW()
-       WHERE id = $4 AND user_id = $5
+       WHERE id = $4 AND user_id = $5 AND deleted_at IS NULL
        RETURNING *`,
       [title, content, tags || [], id, req.user.id]
     );
@@ -363,21 +361,53 @@ app.put('/notes/:id', verifyToken, async (req, res) => {
   }
 });
 
-// Delete a note
+// Delete a note (modified for soft delete)
 app.delete('/notes/:id', verifyToken, async (req, res) => {
   const { id } = req.params;
   try {
-    const removedNote = await dbPool.query(
-      'DELETE FROM notes WHERE id = $1 AND user_id = $2 RETURNING *',
+    const softDeletedNote = await dbPool.query(
+      'UPDATE notes SET deleted_at = NOW() WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL RETURNING *',
       [id, req.user.id]
     );
-    if (removedNote.rows.length === 0) {
+    if (softDeletedNote.rows.length === 0) {
       return res.status(404).json({ error: 'Note not found or access denied.' });
     }
-    res.status(204).send();
+    res.status(200).json({ message: 'Note moved to recently deleted.', note: softDeletedNote.rows[0] });
   } catch (err) {
-    console.error('Delete note error:', err);
+    console.error('Soft delete note error:', err);
     res.status(500).json({ error: 'An error occurred while deleting note.' });
+  }
+});
+
+// NEW: Retrieve recently deleted notes
+app.get('/recently-deleted', verifyToken, async (req, res) => {
+  try {
+    const deletedNotes = await dbPool.query(
+      'SELECT * FROM notes WHERE user_id = $1 AND deleted_at IS NOT NULL ORDER BY deleted_at DESC',
+      [req.user.id]
+    );
+    res.status(200).json(deletedNotes.rows);
+  } catch (err) {
+    console.error('Fetch recently deleted notes error:', err);
+    res.status(500).json({ error: 'An error occurred while fetching recently deleted notes.' });
+  }
+});
+
+// NEW: Permanently delete a note from recently deleted
+app.delete('/recently-deleted/:id', verifyToken, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const permanentlyDeletedNote = await dbPool.query(
+      'DELETE FROM notes WHERE id = $1 AND user_id = $2 AND deleted_at IS NOT NULL RETURNING *',
+      [id, req.user.id]
+    );
+    if (permanentlyDeletedNote.rows.length === 0) {
+      return res.status(404).json({ error: 'Note not found in recently deleted or access denied.' });
+    }
+    res.status(200).json({ message: 'Note permanently deleted.' });
+  } catch (err) {
+    console.error('Permanent delete note error:', err);
+    res.status(500).json({ error: 'An error occurred while permanently deleting note.' });
   }
 });
 

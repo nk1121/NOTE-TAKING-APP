@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, memo } from 'react';
-import { BrowserRouter as Router, Route, Routes, Navigate, Link } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, Navigate, useNavigate } from 'react-router-dom';
 import { Navbar, Nav, Form, FormControl, Button, Alert, Spinner, Dropdown } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSave, faEdit, faTrash, faUser, faCloud, faSearch, faPlay, faPause, faRedo, faStar as faStarSolid, faVolumeUp, faStop, faSignOutAlt, faChevronDown, faChevronRight, faPen, faStickyNote, faStar, faClock, faInfoCircle, faFileExport } from '@fortawesome/free-solid-svg-icons';
+import { faSave, faEdit, faTrash, faUser, faSearch, faPlay, faPause, faRedo, faStar as faStarSolid, faVolumeUp, faStop, faSignOutAlt, faChevronDown, faChevronRight, faPen, faStickyNote, faStar, faClock, faInfoCircle, faFileExport } from '@fortawesome/free-solid-svg-icons';
 import { faStar as faStarRegular } from '@fortawesome/free-regular-svg-icons';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
@@ -27,9 +27,9 @@ const MemoizedReactQuill = memo(ReactQuill, (prevProps, nextProps) => {
 
 const MainApp = ({ onLogout, toggleTheme, theme }) => {
   const [notes, setNotes] = useState([]);
+  const [recentlyDeleted, setRecentlyDeleted] = useState([]);
   const [favorites, setFavorites] = useState([]);
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
+  const [currentNote, setCurrentNote] = useState({ title: '', content: '', tags: [] });
   const [tags, setTags] = useState([]);
   const [tagInput, setTagInput] = useState('');
   const [error, setError] = useState('');
@@ -43,6 +43,7 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
   const [isTagsExpanded, setIsTagsExpanded] = useState(true);
   const [isFavorite, setIsFavorite] = useState(false);
   const quillRef = useRef(null);
+  const navigate = useNavigate();
 
   const colorPalette = [
     '#D4EFDF', '#FFFFCC', '#FFD1DC', '#E6E6FA', '#E0F7FA',
@@ -77,6 +78,7 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
 
   useEffect(() => {
     fetchNotes();
+    fetchRecentlyDeleted();
   }, []);
 
   const fetchNotes = async () => {
@@ -109,8 +111,29 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
     }
   };
 
+  const fetchRecentlyDeleted = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('No authentication token found. Please log in again.');
+
+      const response = await fetch('http://localhost:5000/recently-deleted', {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to fetch recently deleted notes');
+      }
+
+      const data = await response.json();
+      setRecentlyDeleted(data);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
   const handleSaveNote = async () => {
-    if (!title || !content) {
+    if (!currentNote.title || !currentNote.content) {
       setError('Please fill in both title and content.');
       setSuccessMessage('');
       return;
@@ -133,7 +156,7 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ title, content, tags: uppercaseTags }),
+        body: JSON.stringify({ title: currentNote.title, content: currentNote.content, tags: uppercaseTags }),
       });
 
       if (!response.ok) {
@@ -154,6 +177,7 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
 
       await fetchNotes();
       setSuccessMessage('Note saved successfully!');
+      setCurrentNote({ title: '', content: '', tags: [] });
     } catch (err) {
       setError(err.message);
     } finally {
@@ -163,10 +187,9 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
 
   const handleEditNote = (note) => {
     setEditingNoteId(note.id);
-    setTitle(note.title);
-    setContent(note.content);
-    setTags(note.tags || []);
+    setCurrentNote({ title: note.title, content: note.content, tags: note.tags || [] });
     setIsFavorite(favorites.includes(note.id));
+    setTags(note.tags || []);
     setCurrentView('write');
   };
 
@@ -190,11 +213,37 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
 
       setFavorites(favorites.filter((favId) => favId !== id));
       localStorage.setItem('favorites', JSON.stringify(favorites.filter((favId) => favId !== id)));
-      await fetchNotes();
+      setNotes(notes.filter((note) => note.id !== id));
+      await fetchRecentlyDeleted();
+      setCurrentView('recentlyDeleted');
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const permanentDeleteNote = async (noteId) => {
+    if (!window.confirm('Are you sure you want to permanently delete this note?')) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('No authentication token found. Please log in again.');
+
+      const response = await fetch(`http://localhost:5000/recently-deleted/${noteId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to permanently delete note');
+      }
+
+      setRecentlyDeleted(recentlyDeleted.filter((note) => note.id !== noteId));
+      setSuccessMessage('Note permanently deleted.');
+    } catch (err) {
+      setError(err.message);
     }
   };
 
@@ -228,19 +277,21 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
       const newTag = tagInput.trim();
       if (newTag && !tags.includes(newTag)) {
         setTags([...tags, newTag.toUpperCase()]);
+        setCurrentNote({ ...currentNote, tags: [...tags, newTag.toUpperCase()] });
       }
       setTagInput('');
     }
   };
 
   const removeTag = (tagToRemove) => {
-    setTags(tags.filter((tag) => tag !== tagToRemove));
+    const updatedTags = tags.filter((tag) => tag !== tagToRemove);
+    setTags(updatedTags);
+    setCurrentNote({ ...currentNote, tags: updatedTags });
   };
 
   const resetForm = () => {
     setEditingNoteId(null);
-    setTitle('');
-    setContent('');
+    setCurrentNote({ title: '', content: '', tags: [] });
     setTags([]);
     setTagInput('');
     setError('');
@@ -294,28 +345,28 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
   };
 
   const handleExportNote = (format) => {
-    if (!title || !content) {
+    if (!currentNote.title || !currentNote.content) {
       setError('Please fill in both title and content to export.');
       return;
     }
 
     const div = document.createElement('div');
-    div.innerHTML = DOMPurify.sanitize(content);
+    div.innerHTML = DOMPurify.sanitize(currentNote.content);
     const plainText = div.innerText || div.textContent;
 
     if (format === 'pdf') {
       const doc = new jsPDF();
       doc.setFontSize(16);
-      doc.text(title, 10, 10);
+      doc.text(currentNote.title, 10, 10);
       doc.setFontSize(12);
       doc.text(plainText, 10, 20);
-      doc.save(`${title || 'note'}.pdf`);
+      doc.save(`${currentNote.title || 'note'}.pdf`);
     } else if (format === 'text') {
-      const blob = new Blob([`Title: ${title}\n\n${plainText}`], { type: 'text/plain' });
+      const blob = new Blob([`Title: ${currentNote.title}\n\n${plainText}`], { type: 'text/plain' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${title || 'note'}.txt`;
+      a.download = `${currentNote.title || 'note'}.txt`;
       a.click();
       URL.revokeObjectURL(url);
     }
@@ -328,6 +379,8 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
     displayedNotes = notes.filter((note) => favorites.includes(note.id));
   } else if (currentView === 'recent') {
     displayedNotes = [...notes].sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+  } else if (currentView === 'recentlyDeleted') {
+    displayedNotes = recentlyDeleted;
   }
   if (selectedTag) {
     displayedNotes = displayedNotes.filter((note) => (note.tags || []).includes(selectedTag));
@@ -345,257 +398,275 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
   };
 
   return (
-    <div className="app-content">
-      <div className="d-flex flex-grow-1">
-        <Nav className="flex-column sidebar p-3" style={{ minHeight: 'calc(100vh - 56px)' }}>
-          <Nav.Link
-            as={Link}
-            to="/app"
-            className={`sidebar-item ${currentView === 'write' ? 'active' : ''}`}
-            style={currentView === 'write' ? { background: 'linear-gradient(45deg, #007bff, #0056b3)' } : {}}
+    <div className="main-app">
+      <div className="sidebar">
+        <ul className="sidebar-main">
+          <li
+            className={currentView === 'write' ? 'active' : ''}
             onClick={() => {
               setCurrentView('write');
               setSelectedTag(null);
+              navigate('/app'); // Navigate to the main app view
             }}
           >
             <FontAwesomeIcon icon={faPen} className="mr-2" /> Write Note
-          </Nav.Link>
-          <Nav.Link
-            as={Link}
-            to="/app"
-            className={`sidebar-item ${currentView === 'all' ? 'active' : ''}`}
+          </li>
+          <li
+            className={currentView === 'all' ? 'active' : ''}
             onClick={() => {
               setCurrentView('all');
               setSelectedTag(null);
+              navigate('/app'); // Navigate to the main app view
             }}
           >
             <FontAwesomeIcon icon={faStickyNote} className="mr-2" /> All Notes <span className="badge badge-light">{notes.length}</span>
-          </Nav.Link>
-          <Nav.Link
-            as={Link}
-            to="/app"
-            className={`sidebar-item ${currentView === 'favorites' ? 'active' : ''}`}
+          </li>
+          <li
+            className={currentView === 'favorites' ? 'active' : ''}
             onClick={() => {
               setCurrentView('favorites');
               setSelectedTag(null);
+              navigate('/app'); // Navigate to the main app view
             }}
           >
             <FontAwesomeIcon icon={faStar} className="mr-2" /> Favorites <span className="badge badge-light">{favorites.length}</span>
-          </Nav.Link>
-          <Nav.Link
-            as={Link}
-            to="/app"
-            className={`sidebar-item ${currentView === 'recent' ? 'active' : ''}`}
+          </li>
+          <li
+            className={currentView === 'recent' ? 'active' : ''}
             onClick={() => {
               setCurrentView('recent');
               setSelectedTag(null);
+              navigate('/app'); // Navigate to the main app view
             }}
           >
             <FontAwesomeIcon icon={faClock} className="mr-2" /> Recent
-          </Nav.Link>
-          <div className="tags-section">
-            <h6 className="sidebar-item tags-header" onClick={toggleTagsSection}>
-              Tags
-              <FontAwesomeIcon
-                icon={isTagsExpanded ? faChevronDown : faChevronRight}
-                className="ml-2"
-              />
-            </h6>
-            {isTagsExpanded && (
-              <>
-                {allTags.length === 0 && <p className="text-muted small pl-3">No tags available.</p>}
-                {allTags.map((tag) => (
-                  <Nav.Link
-                    key={tag}
-                    as={Link}
-                    to="/app"
-                    className={`sidebar-item small ${selectedTag === tag ? 'active' : ''}`}
-                    onClick={() => {
-                      setSelectedTag(tag);
-                      setCurrentView('all');
-                    }}
-                  >
-                    {tag}
-                  </Nav.Link>
-                ))}
-              </>
-            )}
-          </div>
-          <Nav.Link href="#nextcloud" className="sidebar-item text-purple">
-            <FontAwesomeIcon icon={faCloud} className="mr-1" /> NextCloud Sync
-          </Nav.Link>
-          <Nav.Link onClick={onLogout} className="sidebar-item mt-auto">
+          </li>
+          <li
+            className={currentView === 'recentlyDeleted' ? 'active' : ''}
+            onClick={() => {
+              setCurrentView('recentlyDeleted');
+              setSelectedTag(null);
+              navigate('/app'); // Navigate to the main app view
+            }}
+          >
+            <FontAwesomeIcon icon={faTrash} className="mr-2" /> Recently Deleted <span className="badge badge-light">{recentlyDeleted.length}</span>
+          </li>
+          <li className="tags-header" onClick={toggleTagsSection}>
+            Tags
+            <FontAwesomeIcon
+              icon={isTagsExpanded ? faChevronDown : faChevronRight}
+              className="ml-2"
+            />
+          </li>
+          {isTagsExpanded && allTags.map((tag) => (
+            <li
+              key={tag}
+              className={`small ${selectedTag === tag ? 'active' : ''}`}
+              onClick={() => {
+                setSelectedTag(tag);
+                setCurrentView('all');
+                navigate('/app'); // Navigate to the main app view
+              }}
+            >
+              {tag}
+            </li>
+          ))}
+        </ul>
+        {/* Footer section for Profile and Log Out */}
+        <ul className="sidebar-footer">
+          <li onClick={() => navigate('/profile')}>
+            <FontAwesomeIcon icon={faUser} className="mr-2" /> {localStorage.getItem('username') || 'Guest'}
+          </li>
+          <li onClick={() => { localStorage.removeItem('token'); navigate('/login'); onLogout(); }}>
             <FontAwesomeIcon icon={faSignOutAlt} className="mr-2" /> Log Out
-          </Nav.Link>
-          <Nav.Link as={Link} to="/profile" className="sidebar-item">
-            <FontAwesomeIcon icon={faUser} className="mr-2" />
-            {localStorage.getItem('username') || 'Guest'}
-          </Nav.Link>
-        </Nav>
+          </li>
+        </ul>
+      </div>
 
-        <div className="flex-grow-1 note-editor-container">
-          <Routes>
-            <Route path="/app" element={
-              <>
-                {currentView === 'write' ? (
-                  <div className="note-editor card p-3 shadow-lg mb-3">
-                    <input
-                      type="text"
-                      placeholder="Note title"
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
-                      className="note-title"
-                    />
-                    <MemoizedReactQuill
-                      ref={quillRef}
-                      value={content}
-                      onChange={(newContent) => {
-                        console.log('Editor content changed:', newContent);
-                        setContent(newContent);
-                      }}
-                      modules={quillModules}
-                      formats={quillFormats}
-                      className="note-content mt-2"
-                      placeholder="Write your note here..."
-                      readOnly={false}
-                      preserveWhitespace
-                    />
-                    {error && <Alert variant="danger" className="mt-2">{error}</Alert>}
-                    {successMessage && <Alert variant="success" className="mt-2">{successMessage}</Alert>}
-                    <div className="action-bar mt-2 d-flex align-items-center">
-                      <div className="tags-input-container flex-grow-1 mr-2">
-                        <div className="d-flex flex-wrap mb-1">
-                          {tags.map((tag) => (
-                            <span key={tag} className="badge badge-black mr-1 mb-1">
-                              {tag} <span className="ml-1 text-danger" onClick={() => removeTag(tag)}>×</span>
-                            </span>
-                          ))}
-                        </div>
-                        <FormControl
-                          type="text"
-                          placeholder="Add tags (separate with commas or spaces)..."
-                          value={tagInput}
-                          onChange={handleTagInputChange}
-                          onKeyPress={handleTagInputKeyPress}
-                          className="tag-input"
-                        />
+      <div className="content">
+        <Routes>
+          <Route path="/app" element={
+            <>
+              {currentView === 'write' ? (
+                <div className="note-editor card p-3 shadow-lg mb-3">
+                  <input
+                    type="text"
+                    placeholder="Note title"
+                    value={currentNote.title}
+                    onChange={(e) => setCurrentNote({ ...currentNote, title: e.target.value })}
+                    className="note-title"
+                  />
+                  <MemoizedReactQuill
+                    ref={quillRef}
+                    value={currentNote.content}
+                    onChange={(newContent) => setCurrentNote({ ...currentNote, content: newContent })}
+                    modules={quillModules}
+                    formats={quillFormats}
+                    className="note-content mt-2"
+                    placeholder="Write your note here..."
+                    readOnly={false}
+                    preserveWhitespace
+                  />
+                  {error && <Alert variant="danger" className="mt-2">{error}</Alert>}
+                  {successMessage && <Alert variant="success" className="mt-2">{successMessage}</Alert>}
+                  <div className="action-bar mt-2 d-flex align-items-center">
+                    <div className="tags-input-container flex-grow-1 mr-2">
+                      <div className="d-flex flex-wrap mb-1">
+                        {tags.map((tag) => (
+                          <span key={tag} className="badge badge-black mr-1 mb-1">
+                            {tag} <span className="ml-1 text-danger" onClick={() => removeTag(tag)}>×</span>
+                          </span>
+                        ))}
                       </div>
-                      <Button
-                        variant={isSpeaking && speakingNoteId === null ? "outline-danger" : "outline-primary"}
-                        size="sm"
-                        className="mr-2"
-                        onClick={() => handleSpeak(content, null)}
-                        disabled={!content}
-                      >
-                        <FontAwesomeIcon icon={isSpeaking && speakingNoteId === null ? faStop : faVolumeUp} />
-                      </Button>
-                      <Button
-                        variant="outline-warning"
-                        size="sm"
-                        className="mr-2"
-                        onClick={toggleCurrentNoteFavorite}
-                      >
-                        <FontAwesomeIcon icon={(editingNoteId && favorites.includes(editingNoteId)) || isFavorite ? faStarSolid : faStarRegular} />
-                      </Button>
-                      <Dropdown>
-                        <Dropdown.Toggle
-                          variant="outline-info"
-                          size="sm"
-                          className="mr-2"
-                          id="exportDropdown"
-                        >
-                          <FontAwesomeIcon icon={faFileExport} />
-                        </Dropdown.Toggle>
-                        <Dropdown.Menu>
-                          <Dropdown.Item onClick={() => handleExportNote('pdf')}>
-                            Export as PDF
-                          </Dropdown.Item>
-                          <Dropdown.Item onClick={() => handleExportNote('text')}>
-                            Export as Text
-                          </Dropdown.Item>
-                        </Dropdown.Menu>
-                      </Dropdown>
-                      <Button variant="primary" onClick={handleSaveNote} className="save-button" disabled={loading}>
-                        {loading ? <Spinner animation="border" size="sm" /> : <FontAwesomeIcon icon={faSave} className="mr-2" />}
-                        {editingNoteId ? 'Update Note' : 'Save Note'}
-                      </Button>
+                      <FormControl
+                        type="text"
+                        placeholder="Add tags (separate with commas or spaces)..."
+                        value={tagInput}
+                        onChange={handleTagInputChange}
+                        onKeyPress={handleTagInputKeyPress}
+                        className="tag-input"
+                      />
                     </div>
+                    <Button
+                      variant={isSpeaking && speakingNoteId === null ? "outline-danger" : "outline-primary"}
+                      size="sm"
+                      className="mr-2"
+                      onClick={() => handleSpeak(currentNote.content, null)}
+                      disabled={!currentNote.content}
+                    >
+                      <FontAwesomeIcon icon={isSpeaking && speakingNoteId === null ? faStop : faVolumeUp} />
+                    </Button>
+                    <Button
+                      variant="outline-warning"
+                      size="sm"
+                      className="mr-2"
+                      onClick={toggleCurrentNoteFavorite}
+                    >
+                      <FontAwesomeIcon icon={(editingNoteId && favorites.includes(editingNoteId)) || isFavorite ? faStarSolid : faStarRegular} />
+                    </Button>
+                    <Dropdown>
+                      <Dropdown.Toggle
+                        variant="outline-info"
+                        size="sm"
+                        className="mr-2"
+                        id="exportDropdown"
+                      >
+                        <FontAwesomeIcon icon={faFileExport} />
+                      </Dropdown.Toggle>
+                      <Dropdown.Menu>
+                        <Dropdown.Item onClick={() => handleExportNote('pdf')}>
+                          Export as PDF
+                        </Dropdown.Item>
+                        <Dropdown.Item onClick={() => handleExportNote('text')}>
+                          Export as Text
+                        </Dropdown.Item>
+                      </Dropdown.Menu>
+                    </Dropdown>
+                    <Button variant="primary" onClick={handleSaveNote} className="save-button" disabled={loading}>
+                      {loading ? <Spinner animation="border" size="sm" /> : <FontAwesomeIcon icon={faSave} className="mr-2" />}
+                      {editingNoteId ? 'Update Note' : 'Save Note'}
+                    </Button>
                   </div>
-                ) : (
-                  <div className="notes-list">
-                    <h3>
-                      {currentView === 'favorites' ? 'Favorite Notes' : currentView === 'recent' ? 'Recent Notes' : selectedTag ? `Notes tagged with "${selectedTag}"` : 'All Notes'}
-                    </h3>
-                    {loading && <Spinner animation="border" />}
-                    {!loading && displayedNotes.length === 0 && <p>No notes available.</p>}
+                </div>
+              ) : (
+                <div className="notes-list">
+                  <h2>
+                    {currentView === 'favorites' ? 'Favorite Notes' :
+                     currentView === 'recent' ? 'Recent Notes' :
+                     currentView === 'recentlyDeleted' ? 'Recently Deleted' :
+                     selectedTag ? `Notes tagged with "${selectedTag}"` : 'All Notes'}
+                  </h2>
+                  {loading && <Spinner animation="border" />}
+                  {!loading && displayedNotes.length === 0 && <p>No notes available.</p>}
+                  <ul>
                     {displayedNotes.map((note) => (
-                      <div key={note.id} className="note-item card p-2 mb-2 shadow-sm">
+                      <li key={note.id} className="note-item card p-2 mb-2 shadow-sm">
                         <div className="d-flex justify-content-between">
                           <div>
                             <h5>{note.title}</h5>
-                            <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(note.content) }} />
-                            <div>
-                              {note.tags && note.tags.map((tag) => (
-                                <span key={tag} className="badge badge-black mr-1">{tag}</span>
-                              ))}
-                            </div>
-                            <small className="text-muted">
-                              Last updated: {new Date(note.updated_at).toLocaleString()}
-                            </small>
+                            {currentView !== 'recentlyDeleted' ? (
+                              <>
+                                <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(note.content) }} />
+                                <div>
+                                  {note.tags && note.tags.map((tag) => (
+                                    <span key={tag} className="badge badge-black mr-1">{tag}</span>
+                                  ))}
+                                </div>
+                                <small className="text-muted">
+                                  Last updated: {new Date(note.updated_at).toLocaleString()}
+                                </small>
+                              </>
+                            ) : (
+                              <small className="text-muted">
+                                Deleted: {new Date(note.deleted_at).toLocaleString()}
+                              </small>
+                            )}
                           </div>
                           <div className="d-flex align-items-center">
-                            <Button
-                              variant="outline-warning"
-                              size="sm"
-                              className="mr-1"
-                              onClick={() => toggleFavorite(note.id)}
-                            >
-                              <FontAwesomeIcon icon={favorites.includes(note.id) ? faStarSolid : faStarRegular} />
-                            </Button>
-                            <Button
-                              variant={isSpeaking && speakingNoteId === note.id ? "outline-danger" : "outline-primary"}
-                              size="sm"
-                              className="mr-1"
-                              onClick={() => handleSpeak(note.content, note.id)}
-                            >
-                              <FontAwesomeIcon icon={isSpeaking && speakingNoteId === note.id ? faStop : faVolumeUp} />
-                            </Button>
-                            <Button
-                              variant="outline-primary"
-                              size="sm"
-                              className="mr-1"
-                              onClick={() => handleEditNote(note)}
-                            >
-                              <FontAwesomeIcon icon={faEdit} />
-                            </Button>
-                            <Button
-                              variant="outline-danger"
-                              size="sm"
-                              className="mr-1"
-                              onClick={() => handleDeleteNote(note.id)}
-                            >
-                              <FontAwesomeIcon icon={faTrash} />
-                            </Button>
-                            <Button
-                              variant="outline-info"
-                              size="sm"
-                              className="mr-1"
-                              onClick={() => showNoteId(note.id)}
-                              title="Show Note ID"
-                            >
-                              <FontAwesomeIcon icon={faInfoCircle} />
-                            </Button>
+                            {currentView !== 'recentlyDeleted' ? (
+                              <>
+                                <Button
+                                  variant="outline-warning"
+                                  size="sm"
+                                  className="mr-1"
+                                  onClick={() => toggleFavorite(note.id)}
+                                >
+                                  <FontAwesomeIcon icon={favorites.includes(note.id) ? faStarSolid : faStarRegular} />
+                                </Button>
+                                <Button
+                                  variant={isSpeaking && speakingNoteId === note.id ? "outline-danger" : "outline-primary"}
+                                  size="sm"
+                                  className="mr-1"
+                                  onClick={() => handleSpeak(note.content, note.id)}
+                                >
+                                  <FontAwesomeIcon icon={isSpeaking && speakingNoteId === note.id ? faStop : faVolumeUp} />
+                                </Button>
+                                <Button
+                                  variant="outline-primary"
+                                  size="sm"
+                                  className="mr-1"
+                                  onClick={() => handleEditNote(note)}
+                                >
+                                  <FontAwesomeIcon icon={faEdit} />
+                                </Button>
+                                <Button
+                                  variant="outline-danger"
+                                  size="sm"
+                                  className="mr-1"
+                                  onClick={() => handleDeleteNote(note.id)}
+                                >
+                                  <FontAwesomeIcon icon={faTrash} />
+                                </Button>
+                                <Button
+                                  variant="outline-info"
+                                  size="sm"
+                                  className="mr-1"
+                                  onClick={() => showNoteId(note.id)}
+                                  title="Show Note ID"
+                                >
+                                  <FontAwesomeIcon icon={faInfoCircle} />
+                                </Button>
+                              </>
+                            ) : (
+                              <Button
+                                variant="outline-danger"
+                                size="sm"
+                                onClick={() => permanentDeleteNote(note.id)}
+                              >
+                                Permanently Delete
+                              </Button>
+                            )}
                           </div>
                         </div>
-                      </div>
+                      </li>
                     ))}
-                  </div>
-                )}
-              </>
-            } />
-            <Route path="/profile" element={<ProfilePage onLogout={onLogout} toggleTheme={toggleTheme} theme={theme} />} />
-          </Routes>
-        </div>
+                  </ul>
+                </div>
+              )}
+            </>
+          } />
+          <Route path="/profile" element={<ProfilePage onLogout={onLogout} toggleTheme={toggleTheme} theme={theme} />} />
+        </Routes>
       </div>
     </div>
   );
