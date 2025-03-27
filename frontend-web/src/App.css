@@ -422,7 +422,7 @@ body[data-theme="dark"] .badge-light {
 }
 
 body[data-theme="dark"] .note-item {
-  background-color: #343a40;
+  background-color: hwb(0 100% 0%);
   color: #f8f9fa;
 }
 
@@ -821,4 +821,115 @@ body[data-theme="dark"] .card {
   background-color: #343a40;
   color: #f8f9fa;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Profile page tabs */
+.nav-tabs .nav-link {
+  color: #212529;
+  border: none;
+  border-bottom: 2px solid transparent;
+}
+
+body[data-theme="dark"] .nav-tabs .nav-link {
+  color: #f8f9fa;
+}
+
+.nav-tabs .nav-link.active {
+  color: #007bff;
+  border-bottom: 2px solid #007bff;
+}
+
+body[data-theme="dark"] .nav-tabs .nav-link.active {
+  color: #66b0ff;
+  border-bottom: 2px solid #66b0ff;
+}
+
+/* Dropdown for voice selection */
+.dropdown-toggle {
+  width: 100%;
+  text-align: left;
+}
+
+.dropdown-menu {
+  max-height: 300px;
+  overflow-y: auto;
+  background: #fff;
+}
+
+body[data-theme="dark"] .dropdown-menu {
+  background: #343a40;
+  color: #f8f9fa;
+}
+
+.dropdown-item {
+  color: #212529;
+}
+
+body[data-theme="dark"] .dropdown-item {
+  color: #f8f9fa;
+}
+
+.dropdown-item:hover {
+  background: #e9ecef;
+}
+
+body[data-theme="dark"] .dropdown-item:hover {
+  background: #495057;
+}
+
+.dropdown-header {
+  color: #6c757d;
+}
+
+body[data-theme="dark"] .dropdown-header {
+  color: #adb5bd;
+}
+
+/* Range sliders */
+.form-range::-webkit-slider-thumb {
+  background: #007bff;
+}
+
+body[data-theme="dark"] .form-range::-webkit-slider-thumb {
+  background: #66b0ff;
+}
+
+.form-range::-moz-range-thumb {
+  background: #007bff;
+}
+
+body[data-theme="dark"] .form-range::-moz-range-thumb {
+  background: #66b0ff;
+}
+
+.form-range::-webkit-slider-runnable-track {
+  background: #dee2e6;
+}
+
+body[data-theme="dark"] .form-range::-webkit-slider-runnable-track {
+  background: #6c757d;
+}
+
+.form-range::-moz-range-track {
+  background: #dee2e6;
+}
+
+body[data-theme="dark"] .form-range::-moz-range-track {
+  background: #6c757d;
+}
+
+/* Styles for the TTS Settings button in the profile page */
+body[data-theme="dark"] .btn-outline-secondary {
+  color: #adb5bd;
+  border-color: #adb5bd;
+}
+
+body[data-theme="dark"] .btn-outline-secondary:hover {
+  background: #adb5bd;
+  color: #212529;
+}
+
+/* Highlight the active toolbar item */
+.profile-toolbar-item.active {
+  background-color: #34495e;
 }
