@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, memo } from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate, useNavigate } from 'react-router-dom';
 import { Navbar, Nav, Form, FormControl, Button, Alert, Spinner, Dropdown } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSave, faEdit, faTrash, faUser, faSearch, faPlay, faPause, faRedo, faStar as faStarSolid, faVolumeUp, faStop, faSignOutAlt, faChevronDown, faChevronRight, faPen, faStickyNote, faStar, faClock, faInfoCircle, faFileExport } from '@fortawesome/free-solid-svg-icons';
+import { faSave, faEdit, faTrash, faUser, faSearch, faPlay, faPause, faRedo, faStar as faStarSolid, faVolumeUp, faStop, faSignOutAlt, faChevronDown, faChevronRight, faPen, faStickyNote, faStar, faInfoCircle, faFileExport } from '@fortawesome/free-solid-svg-icons';
 import { faStar as faStarRegular } from '@fortawesome/free-regular-svg-icons';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
@@ -377,8 +377,6 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
   let displayedNotes = notes;
   if (currentView === 'favorites') {
     displayedNotes = notes.filter((note) => favorites.includes(note.id));
-  } else if (currentView === 'recent') {
-    displayedNotes = [...notes].sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
   } else if (currentView === 'recentlyDeleted') {
     displayedNotes = recentlyDeleted;
   }
@@ -406,7 +404,7 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
             onClick={() => {
               setCurrentView('write');
               setSelectedTag(null);
-              navigate('/app'); // Navigate to the main app view
+              navigate('/app');
             }}
           >
             <FontAwesomeIcon icon={faPen} className="mr-2" /> Write Note
@@ -416,7 +414,7 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
             onClick={() => {
               setCurrentView('all');
               setSelectedTag(null);
-              navigate('/app'); // Navigate to the main app view
+              navigate('/app');
             }}
           >
             <FontAwesomeIcon icon={faStickyNote} className="mr-2" /> All Notes <span className="badge badge-light">{notes.length}</span>
@@ -426,27 +424,17 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
             onClick={() => {
               setCurrentView('favorites');
               setSelectedTag(null);
-              navigate('/app'); // Navigate to the main app view
+              navigate('/app');
             }}
           >
             <FontAwesomeIcon icon={faStar} className="mr-2" /> Favorites <span className="badge badge-light">{favorites.length}</span>
-          </li>
-          <li
-            className={currentView === 'recent' ? 'active' : ''}
-            onClick={() => {
-              setCurrentView('recent');
-              setSelectedTag(null);
-              navigate('/app'); // Navigate to the main app view
-            }}
-          >
-            <FontAwesomeIcon icon={faClock} className="mr-2" /> Recent
           </li>
           <li
             className={currentView === 'recentlyDeleted' ? 'active' : ''}
             onClick={() => {
               setCurrentView('recentlyDeleted');
               setSelectedTag(null);
-              navigate('/app'); // Navigate to the main app view
+              navigate('/app');
             }}
           >
             <FontAwesomeIcon icon={faTrash} className="mr-2" /> Recently Deleted <span className="badge badge-light">{recentlyDeleted.length}</span>
@@ -465,14 +453,13 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
               onClick={() => {
                 setSelectedTag(tag);
                 setCurrentView('all');
-                navigate('/app'); // Navigate to the main app view
+                navigate('/app');
               }}
             >
               {tag}
             </li>
           ))}
         </ul>
-        {/* Footer section for Profile and Log Out */}
         <ul className="sidebar-footer">
           <li onClick={() => navigate('/profile')}>
             <FontAwesomeIcon icon={faUser} className="mr-2" /> {localStorage.getItem('username') || 'Guest'}
@@ -572,7 +559,6 @@ const MainApp = ({ onLogout, toggleTheme, theme }) => {
                 <div className="notes-list">
                   <h2>
                     {currentView === 'favorites' ? 'Favorite Notes' :
-                     currentView === 'recent' ? 'Recent Notes' :
                      currentView === 'recentlyDeleted' ? 'Recently Deleted' :
                      selectedTag ? `Notes tagged with "${selectedTag}"` : 'All Notes'}
                   </h2>
