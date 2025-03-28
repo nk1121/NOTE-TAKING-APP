@@ -1,4 +1,16 @@
-/* General styles for light and dark themes */
+/* General Styles for Light and Dark Themes */
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+}
+
 body[data-theme="light"] {
   background-color: #f8f9fa;
   color: #212529;
@@ -9,13 +21,7 @@ body[data-theme="dark"] {
   color: #f8f9fa;
 }
 
-/* Main app layout */
-.main-app {
-  display: flex;
-  min-height: calc(100vh - 56px);
-}
-
-/* App container */
+/* Main App Layout */
 .app {
   display: flex;
   flex-direction: column;
@@ -29,7 +35,12 @@ body[data-theme="dark"] {
   overflow: hidden;
 }
 
-/* Content area */
+.main-app {
+  display: flex;
+  min-height: calc(100vh - 56px);
+}
+
+/* Content Area */
 .content {
   flex-grow: 1;
   padding: 20px;
@@ -131,7 +142,7 @@ body[data-theme="dark"] .sidebar-item {
   background: #34495e;
 }
 
-/* Tags section in the sidebar */
+/* Tags Section in Sidebar */
 .tags-section {
   margin-bottom: 1rem;
   transition: all 0.3s ease;
@@ -164,7 +175,7 @@ body[data-theme="dark"] .sidebar-item {
   padding-left: 1.5rem;
 }
 
-/* Note editor */
+/* Note Editor */
 .note-editor-container {
   flex: 1;
   overflow-y: auto;
@@ -227,7 +238,6 @@ body[data-theme="dark"] .note-title::placeholder {
   flex-direction: column;
 }
 
-/* React Quill editor styles */
 .note-editor .ql-toolbar {
   display: block !important;
   border: 1px solid #ccc;
@@ -297,7 +307,6 @@ body[data-theme="dark"] .ql-snow .ql-fill {
   fill: #f8f9fa;
 }
 
-/* Color picker swatches */
 .ql-color-picker .ql-picker-item {
   width: 20px;
   height: 20px;
@@ -309,7 +318,7 @@ body[data-theme="dark"] .ql-color-picker .ql-picker-item {
   border-color: #6c757d;
 }
 
-/* Action bar */
+/* Action Bar */
 .action-bar {
   display: flex;
   align-items: center;
@@ -365,7 +374,7 @@ body[data-theme="dark"] .save-button:hover {
   background: #1565c0;
 }
 
-/* Tags input */
+/* Tags Input */
 .tags-input-container {
   margin-top: 10px;
   flex-grow: 1;
@@ -409,7 +418,7 @@ body[data-theme="dark"] .badge-light {
   color: #f8f9fa;
 }
 
-/* Notes list */
+/* Notes List */
 .notes-list h2 {
   margin-bottom: 20px;
 }
@@ -422,7 +431,7 @@ body[data-theme="dark"] .badge-light {
 }
 
 body[data-theme="dark"] .note-item {
-  background-color: hwb(0 100% 0%);
+  background-color: #343a40; /* Corrected from hwb(0 100% 0%) */
   color: #f8f9fa;
 }
 
@@ -440,10 +449,10 @@ body[data-theme="dark"] .note-item h5 {
 }
 
 body[data-theme="dark"] .note-item .text-muted {
-  color: #80deea; /* Changed to a light cyan for better visibility */
+  color: #80deea; /* Light cyan for visibility */
 }
 
-/* Profile page */
+/* Profile Page */
 .profile-page-container {
   flex: 1;
   background: #ffffff;
@@ -456,6 +465,38 @@ body[data-theme="dark"] .note-item .text-muted {
 
 body[data-theme="dark"] .profile-page-container {
   background: #212529;
+}
+
+.profile-form-container {
+  max-width: 400px;
+  width: 100%;
+  padding: 0.5rem;
+  background: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  flex: 1;
+  overflow-y: auto;
+}
+
+body[data-theme="dark"] .profile-form-container {
+  background: #343a40;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.profile-section,
+.tts-section {
+  overflow-x: hidden; /* Prevents horizontal scrolling */
+  max-width: 100%; /* Ensures content stays within parent width */
+  word-wrap: break-word; /* Breaks long words to prevent overflow */
+}
+
+.profile-input,
+.form-control,
+.input-group,
+.dropdown-button {
+  max-width: 100%; /* Keeps inputs/buttons within container */
+  width: 100%; /* Ensures full width usage without overflow */
+  box-sizing: border-box; /* Includes padding/border in width calculation */
 }
 
 .profile-header {
@@ -475,9 +516,10 @@ body[data-theme="dark"] .profile-title {
 .profile-toolbar {
   background: #2c3e50;
   border-radius: 8px;
-  padding: 0.2rem;
+  padding: 0.2rem 0.5rem;
   display: flex;
-  gap: 0.2rem;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 0.5rem;
 }
 
@@ -487,9 +529,15 @@ body[data-theme="dark"] .profile-toolbar {
 
 .profile-toolbar-item {
   color: #ffffff;
-  padding: 0.2rem 0.5rem;
+  padding: 0.5rem;
   border-radius: 5px;
   transition: background-color 0.3s ease;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 40px;
 }
 
 .profile-toolbar-item:hover {
@@ -497,24 +545,12 @@ body[data-theme="dark"] .profile-toolbar {
   color: #ffffff;
 }
 
+.profile-toolbar-item.active {
+  background-color: #34495e;
+}
+
 .profile-toolbar-item.text-danger {
   color: #ff6b6b !important;
-}
-
-.profile-form-container {
-  max-width: 400px;
-  width: 100%;
-  padding: 0.5rem;
-  background: #ffffff;
-  border-radius: 10px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-  flex: 1;
-  overflow-y: auto;
-}
-
-body[data-theme="dark"] .profile-form-container {
-  background: #343a40;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
 }
 
 .profile-label {
@@ -591,7 +627,50 @@ body[data-theme="dark"] .profile-button:hover {
   border-radius: 8px;
 }
 
-/* Form controls */
+/* Login Page */
+.login-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: #f8f9fa;
+}
+
+body[data-theme="dark"] .login-page {
+  background-color: #212529;
+}
+
+.login-container {
+  max-width: 400px;
+  width: 100%;
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+body[data-theme="dark"] .login-container {
+  background: #343a40;
+}
+
+.login-button {
+  background-color: #007bff;
+  border: none;
+}
+
+.login-button:hover {
+  background-color: #0056b3;
+}
+
+.signup-link {
+  color: #007bff;
+  text-decoration: none;
+}
+
+.signup-link:hover {
+  text-decoration: underline;
+}
+
+/* Form Controls */
 .form-control {
   background: #fff;
   color: #212529;
@@ -796,7 +875,7 @@ body[data-theme="dark"] .splash-content {
   margin-top: 1rem;
 }
 
-/* General list and button styles */
+/* General List and Button Styles */
 ul {
   list-style: none;
   padding: 0;
@@ -810,7 +889,7 @@ button {
   margin-left: 10px;
 }
 
-/* Card styles */
+/* Card Styles */
 .card {
   background: #fff;
   border-radius: 8px;
@@ -823,7 +902,7 @@ body[data-theme="dark"] .card {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
-/* Profile page tabs */
+/* Profile Page Tabs */
 .nav-tabs .nav-link {
   color: #212529;
   border: none;
@@ -844,7 +923,7 @@ body[data-theme="dark"] .nav-tabs .nav-link.active {
   border-bottom: 2px solid #66b0ff;
 }
 
-/* Dropdown for voice selection */
+/* Dropdown for Voice Selection */
 .dropdown-toggle {
   width: 100%;
   text-align: left;
@@ -885,7 +964,7 @@ body[data-theme="dark"] .dropdown-header {
   color: #adb5bd;
 }
 
-/* Range sliders */
+/* Range Sliders */
 .form-range::-webkit-slider-thumb {
   background: #007bff;
 }
@@ -918,7 +997,7 @@ body[data-theme="dark"] .form-range::-moz-range-track {
   background: #6c757d;
 }
 
-/* Styles for the TTS Settings button in the profile page */
+/* Styles for TTS Settings Button */
 body[data-theme="dark"] .btn-outline-secondary {
   color: #adb5bd;
   border-color: #adb5bd;
@@ -927,9 +1006,4 @@ body[data-theme="dark"] .btn-outline-secondary {
 body[data-theme="dark"] .btn-outline-secondary:hover {
   background: #adb5bd;
   color: #212529;
-}
-
-/* Highlight the active toolbar item */
-.profile-toolbar-item.active {
-  background-color: #34495e;
 }

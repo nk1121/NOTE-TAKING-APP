@@ -59,7 +59,7 @@ const LoginPage = ({ onLogin }) => {
   return (
     <div className="login-page">
       <div className="login-container card p-4 shadow-lg">
-        <h2 className="text-center mb-4">Login to NoteApp</h2>
+        <h2 className="text-center mb-4">Login to PixelNotes</h2>
         {error && (
           <Alert variant={error.includes('successful') ? 'success' : 'danger'} className="text-center">
             {error}
