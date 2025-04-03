@@ -1,14 +1,10 @@
 import React from 'react';
-import { Spinner } from 'react-bootstrap';
+import './SplashScreen.css';
 
 const SplashScreen = () => {
   return (
     <div className="splash-screen">
-      <div className="splash-content">
-        <h1>Note-Taking App</h1>
-        <Spinner animation="border" variant="primary" />
-        <p>Loading...</p>
-      </div>
+      <img src="/logo.png" alt="PixelNotes Logo" className="splash-logo" />
     </div>
   );
 };

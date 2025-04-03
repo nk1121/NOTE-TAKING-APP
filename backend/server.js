@@ -1,15 +1,17 @@
-const express = require("express");
+
 const { Pool } = require("pg");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const nodemailer = require("nodemailer");
 const crypto = require("crypto");
-const cors = require("cors");
+
 require("dotenv").config();
 
+const express = require("express");
+const cors = require("cors");
 const app = express();
 
-// Set up CORS (development settings; adjust for production)
+// Set up CORS 
 app.use(
   cors({
     origin: "*",
@@ -510,3 +512,4 @@ app.delete("/recently-deleted/:id", verifyToken, async (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+

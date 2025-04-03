@@ -41,3 +41,16 @@
     color: #0056b3;
     text-decoration: underline;
   }
+
+  /* In LoginPage.css */
+  .login-container .alert-success {
+    display: block !important;
+    opacity: 1 !important;
+    min-height: 40px;
+    margin-bottom: 10px;
+  }
+
+body[data-theme="dark"] .login-container .alert-success {
+  background-color: #2e7d32; /* Darker green for dark theme */
+  color: #f8f9fa;
+}
