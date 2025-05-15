@@ -162,18 +162,8 @@ const ProfilePage = ({ onLogout, toggleTheme, theme }) => {
           >
             <FontAwesomeIcon icon={faCog} />
           </span>
-          <span
-            className="profile-toolbar-item"
-            title="Notifications"
-          >
-            <FontAwesomeIcon icon={faBell} />
-          </span>
-          <span
-            className="profile-toolbar-item"
-            title="View Profile"
-          >
-            <FontAwesomeIcon icon={faUser} />
-          </span>
+          
+          
           <span
             className="profile-toolbar-item text-danger"
             onClick={onLogout}

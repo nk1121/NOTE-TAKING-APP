@@ -98,7 +98,7 @@ const CustomDrawerContent = (props) => {
       contentContainerStyle={styles.drawerContent}
     >
       <View style={styles.drawerHeader}>
-        <Text style={styles.drawerHeaderText}>NoteApp</Text>
+        <Text style={styles.drawerHeaderText}>Pixel Notes</Text>
       </View>
       <DrawerItemList {...props} />
       <DrawerItem

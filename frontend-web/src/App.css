@@ -445,7 +445,7 @@ body[data-theme="dark"] .note-item h5 {
 }
 
 .note-item .text-muted {
-  color: #6c757d;
+  color: #ff0303;
 }
 
 body[data-theme="dark"] .note-item .text-muted {
@@ -724,7 +724,7 @@ body[data-theme="dark"] .alert-danger {
 .app-title-container {
   width: 200px;
   display: flex;
-  justify-content: center;
+  justify-content: left;
 }
 
 .app-title {
@@ -1006,4 +1006,11 @@ body[data-theme="dark"] .btn-outline-secondary {
 body[data-theme="dark"] .btn-outline-secondary:hover {
   background: #adb5bd;
   color: #212529;
+}
+
+.app-title img {
+  transition: transform 0.2s;
+}
+.app-title img:hover {
+  transform: scale(1.1); /* Slight zoom on hover */
 }

@@ -157,9 +157,11 @@ const RegisterPage = () => {
               {confirmPasswordError && <div className="invalid-feedback">Please confirm your password</div>}
             </InputGroup>
           </Form.Group>
-          <Button variant="primary" type="submit" className="w-100 login-button mb-3">
-            Sign Up
-          </Button>
+          <div className="d-flex justify-content-center mb-3">
+            <Button variant="primary" type="submit" className="login-button">
+              Sign Up
+            </Button>
+          </div>
           <div className="text-center">
             <p className="mb-0">
               Already have an account?{' '}

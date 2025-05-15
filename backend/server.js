@@ -1,4 +1,3 @@
-
 const { Pool } = require("pg");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
@@ -14,7 +13,7 @@ const app = express();
 // Set up CORS 
 app.use(
   cors({
-    origin: "*",
+    origin: "*", // Consider restricting to 'http://localhost:3000' for security in production
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
   })
@@ -37,13 +36,29 @@ dbPool.connect((err) => {
   }
 });
 
-// Set up the email transporter
+// Set up the email transporter with explicit SMTP settings
 const mailer = nodemailer.createTransport({
-  service: "gmail",
+  host: "smtp.gmail.com",
+  port: 587, // First try TLS on port 587
+  secure: false, // False for 587 (STARTTLS)
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
+    user: process.env.EMAIL_USER, // Your Gmail address (e.g., 'your-email@gmail.com')
+    pass: process.env.EMAIL_PASS, // Your 16-character App Password (e.g., 'abcdefghijklmnop')
   },
+  logger: true, // Enable logging for debugging
+  debug: true, // Show detailed SMTP logs
+  tls: {
+    rejectUnauthorized: false, // Allow self-signed certificates (useful for local testing)
+  },
+});
+
+// Verify mailer setup
+mailer.verify((error, success) => {
+  if (error) {
+    console.error("Mailer configuration error:", error);
+  } else {
+    console.log("Mailer is ready to send emails");
+  }
 });
 
 // Middleware to verify JSON Web Tokens
@@ -158,7 +173,7 @@ app.post("/login", async (req, res) => {
   }
 });
 
-// Forgot password route (unchanged)
+// Forgot password route (unchanged logic, relies on updated mailer)
 app.post("/forgot-password", async (req, res) => {
   const { email } = req.body;
   if (!email) {
@@ -185,7 +200,7 @@ app.post("/forgot-password", async (req, res) => {
 
     const resetLink = `http://localhost:3000/reset-password?token=${resetToken}`;
     const mailDetails = {
-      from: process.env.EMAIL_USER,
+      from: `"PixelNotes" <${process.env.EMAIL_USER}>`,
       to: email,
       subject: "Reset Your Account Password",
       html: `
@@ -379,7 +394,7 @@ app.delete("/delete-account", verifyToken, async (req, res) => {
 
 // ===== NOTES ROUTES =====
 
-// Retrieve active notes (modified to exclude deleted notes)
+// Retrieve active notes (unchanged)
 app.get("/notes", verifyToken, async (req, res) => {
   try {
     const notes = await dbPool.query(
@@ -414,7 +429,7 @@ app.post("/notes", verifyToken, async (req, res) => {
   }
 });
 
-// Update an existing note (modified to check deleted_at)
+// Update an existing note (unchanged)
 app.put("/notes/:id", verifyToken, async (req, res) => {
   const { id } = req.params;
   const { title, content, tags } = req.body;
@@ -441,7 +456,7 @@ app.put("/notes/:id", verifyToken, async (req, res) => {
   }
 });
 
-// Delete a note (modified for soft delete)
+// Delete a note (unchanged)
 app.delete("/notes/:id", verifyToken, async (req, res) => {
   const { id } = req.params;
   try {
@@ -466,7 +481,7 @@ app.delete("/notes/:id", verifyToken, async (req, res) => {
   }
 });
 
-// NEW: Retrieve recently deleted notes
+// Retrieve recently deleted notes (unchanged)
 app.get("/recently-deleted", verifyToken, async (req, res) => {
   try {
     const deletedNotes = await dbPool.query(
@@ -484,7 +499,7 @@ app.get("/recently-deleted", verifyToken, async (req, res) => {
   }
 });
 
-// NEW: Permanently delete a note from recently deleted
+// Permanently delete a note from recently deleted (unchanged)
 app.delete("/recently-deleted/:id", verifyToken, async (req, res) => {
   const { id } = req.params;
   try {
@@ -512,4 +527,3 @@ app.delete("/recently-deleted/:id", verifyToken, async (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-
