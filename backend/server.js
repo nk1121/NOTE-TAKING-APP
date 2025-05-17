@@ -10,14 +10,27 @@ const express = require("express");
 const cors = require("cors");
 const app = express();
 
-// Set up CORS 
-app.use(
-  cors({
-    origin: "*", // Consider restricting to 'http://localhost:3000' for security in production
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
+// --- CORS SETUP ---
+const allowedOrigins = [
+  "http://localhost:3000",
+  "http://172.20.10.3:3000"
+];
+
+app.use(cors({
+  origin: (origin, cb) => {
+    if (!origin) return cb(null, true);             // allow server-to-server or curl
+    if (allowedOrigins.includes(origin)) return cb(null, true);
+    cb(new Error("Not allowed by CORS"));
+  },
+  methods: ["GET","POST","PUT","DELETE","OPTIONS"],
+  allowedHeaders: ["Content-Type","Authorization"],
+  optionsSuccessStatus: 200
+}));
+
+// handle preflight for all routes
+app.options("*", cors());
+
+// parse JSON bodies
 app.use(express.json());
 
 // Initialize PostgreSQL connection pool
