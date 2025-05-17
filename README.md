@@ -1,202 +1,106 @@
-# PIXEL NOTES
-A full-stack note-taking application featuring a Node.js/Express/PostgreSQL backend, Expo React Native mobile app, and React web frontend.
-Table of Contents
+\documentclass[a4paper,12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{geometry}
+\geometry{a4paper, margin=1in}
+\usepackage{enumitem}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{parskip}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true, linkcolor=blue, urlcolor=blue}
+\usepackage{noto}
+\renewcommand{\familydefault}{\sfdefault}
+
+\begin{document}
+
+\section*{Pixel Notes System Overview}
+\subsection*{Features}
+\begin{itemize}[leftmargin=*]
+    \item User registration/login with JWT authentication
+    \item Password reset via email (Nodemailer)
+    \item Profile management: view, update, change password, delete account
+    \item Note CRUD with rich-text editor, tags, color/font options, image/link insertion
+    \item Text-to-Speech playback and Pomodoro timer
+    \item Favorites, search, tag filtering, recent/soft-deleted notes
+    \item Export notes to PDF/text; light/dark themes
+\end{itemize}
+
+\subsection*{Tech Stack}
+\begin{tabular}{>{\raggedright\arraybackslash}p{3cm} >{\raggedright\arraybackslash}p{10cm}}
+    \toprule
+    \textbf{Layer} & \textbf{Technologies} \\
+    \midrule
+    Backend & Node.js, Express, PostgreSQL (pg), bcrypt, JWT, Nodemailer, dotenv \\
+    Mobile App & React Native (Expo), AsyncStorage, react-native-pell-rich-editor, expo-speech \\
+    Web App & React, React Bootstrap, react-quill, DOMPurify, jsPDF, React Router \\
+    \bottomrule
+\end{tabular}
+
+\subsection*{Prerequisites}
+\begin{itemize}[leftmargin=*]
+    \item Node.js (v14+), Yarn/npm
+    \item PostgreSQL database
+    \item Gmail account with app password for SMTP
+\end{itemize}
+
+\subsection*{Environment Variables}
+Create \texttt{.env} in backend root:
+\begin{itemize}[leftmargin=*]
+    \item \texttt{DB\_HOST}, \texttt{DB\_USER}, \texttt{DB\_PASSWORD}, \texttt{DB\_NAME}
+    \item \texttt{EMAIL\_USER}, \texttt{EMAIL\_PASS}, \texttt{JWT\_SECRET}, \texttt{PORT=5000}
+\end{itemize}
+
+\subsection*{Backend Setup}
+\begin{itemize}[leftmargin=*]
+    \item Install: \texttt{cd backend; npm install}
+    \item Ensure tables: users, notes, password\_reset\_tokens
+    \item Start: \texttt{npm start}
+\end{itemize}
+
+\subsection*{Mobile (React Native) Setup}
+\begin{itemize}[leftmargin=*]
+    \item Install Expo CLI: \texttt{npm install -g expo-cli}
+    \item Install: \texttt{cd mobile-app; npm install}
+    \item Configure: Set \texttt{BASE\_URL} in \texttt{config.js}
+    \item Run: \texttt{expo start}
+\end{itemize}
+
+\subsection*{Web (React) Setup}
+\begin{itemize}[leftmargin=*]
+    \item Install: \texttt{cd web-frontend; npm install}
+    \item Configure: Set backend URL in API calls
+    \item Start: \texttt{npm start}
+\end{itemize}
+
+\subsection*{API Endpoints}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Auth}: \texttt{POST /register}, \texttt{/login}, \texttt{/forgot-password}, \texttt{/reset-password}
+    \item \textbf{User}: \texttt{GET/PUT /profile}, \texttt{POST /change-password}, \texttt{DELETE /delete-account}
+    \item \textbf{Notes}: \texttt{GET/POST/PUT/DELETE /notes(/:id)}, \texttt{GET/DELETE /recently-deleted(/:id)}
+    \item Note routes require \texttt{Authorization: Bearer <token>}
+\end{itemize}
+
+\subsection*{Authentication Flow}
+\begin{itemize}[leftmargin=*]
+    \item Register/login to receive JWT
+    \item Store JWT in localStorage (web) or AsyncStorage (mobile)
+    \item Include \texttt{Authorization} header for protected API calls
+    \item Logout clears token, redirects to login
+\end{itemize}
+
+\subsection*{Contributing}
+\begin{itemize}[leftmargin=*]
+    \item Fork repo, create feature branch: \texttt{git checkout -b feature/YourFeature}
+    \item Commit: \texttt{git commit -m 'Add feature'}
+    \item Push: \texttt{git push origin feature/YourFeature}
+    \item Submit Pull Request
+\end{itemize}
 
-Features
+\subsection*{License}
+MIT License: Free to use and modify.
 
-Tech Stack
-
-Prerequisites
-
-Environment Variables
-
-Backend Setup
-
-Mobile (React Native) Setup
-
-Web (React) Setup
-
-API Endpoints
-
-Authentication Flow
-
-Contributing
-
-
-
-Features
-
-User registration & login (JWT authentication)
-
-Password reset via email (nodemailer)
-
-Profile management (view, update, change password, delete account)
-
-CRUD notes with tags, rich-text editor, color/font options, image & link insertion
-
-Text-to-speech playback
-
-Favorites, search, filter by tags, recent notes, and soft-deleted notes
-
-Export notes to PDF or plain text
-
-Tags navigation drawer
-
-Light & dark themes
-
-Pomodoro timer integrated in navbar
-
-Tech Stack
-
-Layer
-
-Technologies
-
-Backend
-
-Node.js, Express, PostgreSQL (pg), bcrypt, JWT, nodemailer, dotenv
-
-Mobile App
-
-React Native (Expo), AsyncStorage, react-native-pell-rich-editor, react-native-color-picker, expo-speech, expo-image-picker
-
-Web App
-
-React, React Bootstrap, react-quill, DOMPurify, jsPDF, React Router, FontAwesome
-
-Prerequisites
-
-Node.js (v14+)
-
-Yarn or npm
-
-PostgreSQL database
-
-Google/Gmail account for SMTP (app password)
-
-Environment Variables
-
-Create a .env file in the backend root:
-
-DB_HOST=your_db_host
-DB_USER=your_db_user
-DB_PASSWORD=your_db_password
-DB_NAME=your_db_name
-EMAIL_USER=your_gmail_address@gmail.com
-EMAIL_PASS=your_gmail_app_password
-JWT_SECRET=your_jwt_secret
-PORT=5000
-
-Backend Setup
-
-Install dependencies:
-
-cd backend
-npm install
-
-Run database migrations / ensure tables exist:
-
-users
-
-notes
-
-password_reset_tokens
-
-Start server:
-
-npm start
-
-Mobile (React Native) Setup
-
-Install Expo CLI globally:
-
-npm install -g expo-cli
-
-Install dependencies:
-
-cd mobile-app
-npm install
-
-Configure config.js:
-
-const BASE_URL = 'http://<backend-host>:5000';
-export default BASE_URL;
-
-Run on device/emulator:
-
-expo start
-
-Web (React) Setup
-
-Install dependencies:
-
-cd web-frontend
-npm install
-
-Configure backend URL in code (e.g., fetch('http://localhost:5000/...')).
-
-Start development server:
-
-npm start
-
-API Endpoints
-
-Auth
-
-POST /register — Create user
-
-POST /login — Authenticate, returns JWT
-
-POST /forgot-password — Send reset link to email
-
-POST /reset-password — Reset password with token
-
-User
-
-GET /profile — Get current user
-
-PUT /profile — Update profile
-
-POST /change-password — Change current password
-
-DELETE /delete-account — Delete account
-
-Notes
-
-GET /notes — List active notes
-
-POST /notes — Create note
-
-PUT /notes/:id — Update note
-
-DELETE /notes/:id — Soft-delete note
-
-GET /recently-deleted — List trashed notes
-
-DELETE /recently-deleted/:id — Permanently delete note
-
-All note routes require Authorization: Bearer <token> header.
-
-Authentication Flow
-
-User registers or logs in to receive a JWT.
-
-JWT stored in localStorage (web) or AsyncStorage (mobile).
-
-Protected API calls include Authorization header.
-
-Logout clears token and redirects to login.
-
-Contributing
-
-Fork the repo.
-
-Create a feature branch: git checkout -b feature/YourFeature.
-
-Commit your changes: git commit -m 'Add feature'.
-
-Push to branch: git push origin feature/YourFeature.
-
-Open a Pull Request.
-
-
+\end{document}
