@@ -75,7 +75,7 @@ const RegisterScreen = () => {
   return (
     <ScrollView style={[styles.container, { backgroundColor: theme === 'light' ? '#f8f9fa' : '#212529' }]}>
       <View style={[styles.card, { backgroundColor: theme === 'light' ? '#fff' : '#343a40' }]}>
-        <Text style={[styles.title, { color: theme === 'light' ? '#000' : '#f8f9fa' }]}>Sign Up for Pixel Notes</Text>
+        <Text style={[styles.title, { color: theme === 'light' ? '#000' : '#f8f9fa' }]}>Sign Up for NoteApp</Text>
         {error ? <Text style={styles.error}>{error}</Text> : null}
         {success ? <Text style={styles.success}>{success}</Text> : null}
         <TextInput

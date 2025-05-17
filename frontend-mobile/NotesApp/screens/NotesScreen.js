@@ -61,16 +61,9 @@ const NotesScreen = ({ navigation, route }) => {
     try {
       if (!BASE_URL) throw new Error("BASE_URL is not defined.");
       const token = await AsyncStorage.getItem("token");
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10-second timeout
-  
       const response = await fetch(`${BASE_URL}/notes`, {
         headers: { Authorization: `Bearer ${token}` },
-        signal: controller.signal,
       });
-  
-      clearTimeout(timeoutId);
-  
       const responseText = await response.text();
       if (!response.ok) {
         let errorData;
@@ -94,11 +87,7 @@ const NotesScreen = ({ navigation, route }) => {
       }));
       setNotes(updatedData);
     } catch (err) {
-      if (err.name === "AbortError") {
-        Alert.alert('Error', 'Request timed out. Please check your network or try again later.');
-      } else {
-        Alert.alert("Error", err.message);
-      }
+      Alert.alert("Error", err.message);
     }
   };
 

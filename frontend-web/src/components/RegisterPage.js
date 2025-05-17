@@ -8,6 +8,8 @@ const RegisterPage = () => {
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [name, setName] = useState('');
+  const [profilePicture, setProfilePicture] = useState('');
+  const [bio, setBio] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
@@ -55,7 +57,7 @@ const RegisterPage = () => {
       const response = await fetch('http://localhost:5000/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, username, password, name }),
+        body: JSON.stringify({ email, username, password, name, profile_picture: profilePicture, bio }),
       });
 
       const data = await response.json();
@@ -89,7 +91,7 @@ const RegisterPage = () => {
   return (
     <div className="login-page">
       <div className="login-container card p-4 shadow-lg">
-        <h2 className="text-center mb-4">Sign Up for PixelNotes</h2>
+        <h2 className="text-center mb-4">Sign Up for Note-Taking App</h2>
         {error && <Alert variant="danger" className="text-center">{error}</Alert>}
         {success && <Alert variant="success" className="text-center">{success}</Alert>}
         <Form onSubmit={handleRegister}>
@@ -125,6 +127,25 @@ const RegisterPage = () => {
               onChange={(e) => setName(e.target.value)}
             />
           </Form.Group>
+          <Form.Group controlId="profilePicture" className="mb-3">
+            <Form.Label>Profile Picture URL</Form.Label>
+            <Form.Control
+              type="text"
+              placeholder="Enter profile picture URL"
+              value={profilePicture}
+              onChange={(e) => setProfilePicture(e.target.value)}
+            />
+          </Form.Group>
+          <Form.Group controlId="bio" className="mb-3">
+            <Form.Label>Bio</Form.Label>
+            <Form.Control
+              as="textarea"
+              rows={3}
+              placeholder="Tell us about yourself"
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
+            />
+          </Form.Group>
           <Form.Group controlId="password" className="mb-3">
             <Form.Label>Password *</Form.Label>
             <InputGroup>
@@ -157,11 +178,9 @@ const RegisterPage = () => {
               {confirmPasswordError && <div className="invalid-feedback">Please confirm your password</div>}
             </InputGroup>
           </Form.Group>
-          <div className="d-flex justify-content-center mb-3">
-            <Button variant="primary" type="submit" className="login-button">
-              Sign Up
-            </Button>
-          </div>
+          <Button variant="primary" type="submit" className="w-100 login-button mb-3">
+            Sign Up
+          </Button>
           <div className="text-center">
             <p className="mb-0">
               Already have an account?{' '}

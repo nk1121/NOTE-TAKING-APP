@@ -1,36 +1,22 @@
+const express = require("express");
 const { Pool } = require("pg");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const nodemailer = require("nodemailer");
 const crypto = require("crypto");
-
+const cors = require("cors");
 require("dotenv").config();
 
-const express = require("express");
-const cors = require("cors");
 const app = express();
 
-// --- CORS SETUP ---
-const allowedOrigins = [
-  "http://localhost:3000",
-  "http://172.20.10.3:3000"
-];
-
-app.use(cors({
-  origin: (origin, cb) => {
-    if (!origin) return cb(null, true);             // allow server-to-server or curl
-    if (allowedOrigins.includes(origin)) return cb(null, true);
-    cb(new Error("Not allowed by CORS"));
-  },
-  methods: ["GET","POST","PUT","DELETE","OPTIONS"],
-  allowedHeaders: ["Content-Type","Authorization"],
-  optionsSuccessStatus: 200
-}));
-
-// handle preflight for all routes
-app.options("*", cors());
-
-// parse JSON bodies
+// Set up CORS (development settings; adjust for production)
+app.use(
+  cors({
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 app.use(express.json());
 
 // Initialize PostgreSQL connection pool
@@ -49,29 +35,13 @@ dbPool.connect((err) => {
   }
 });
 
-// Set up the email transporter with explicit SMTP settings
+// Set up the email transporter
 const mailer = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587, // First try TLS on port 587
-  secure: false, // False for 587 (STARTTLS)
+  service: "gmail",
   auth: {
-    user: process.env.EMAIL_USER, // Your Gmail address (e.g., 'your-email@gmail.com')
-    pass: process.env.EMAIL_PASS, // Your 16-character App Password (e.g., 'abcdefghijklmnop')
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
   },
-  logger: true, // Enable logging for debugging
-  debug: true, // Show detailed SMTP logs
-  tls: {
-    rejectUnauthorized: false, // Allow self-signed certificates (useful for local testing)
-  },
-});
-
-// Verify mailer setup
-mailer.verify((error, success) => {
-  if (error) {
-    console.error("Mailer configuration error:", error);
-  } else {
-    console.log("Mailer is ready to send emails");
-  }
 });
 
 // Middleware to verify JSON Web Tokens
@@ -186,7 +156,7 @@ app.post("/login", async (req, res) => {
   }
 });
 
-// Forgot password route (unchanged logic, relies on updated mailer)
+// Forgot password route (unchanged)
 app.post("/forgot-password", async (req, res) => {
   const { email } = req.body;
   if (!email) {
@@ -213,7 +183,7 @@ app.post("/forgot-password", async (req, res) => {
 
     const resetLink = `http://localhost:3000/reset-password?token=${resetToken}`;
     const mailDetails = {
-      from: `"PixelNotes" <${process.env.EMAIL_USER}>`,
+      from: process.env.EMAIL_USER,
       to: email,
       subject: "Reset Your Account Password",
       html: `
@@ -407,7 +377,7 @@ app.delete("/delete-account", verifyToken, async (req, res) => {
 
 // ===== NOTES ROUTES =====
 
-// Retrieve active notes (unchanged)
+// Retrieve active notes (modified to exclude deleted notes)
 app.get("/notes", verifyToken, async (req, res) => {
   try {
     const notes = await dbPool.query(
@@ -442,7 +412,7 @@ app.post("/notes", verifyToken, async (req, res) => {
   }
 });
 
-// Update an existing note (unchanged)
+// Update an existing note (modified to check deleted_at)
 app.put("/notes/:id", verifyToken, async (req, res) => {
   const { id } = req.params;
   const { title, content, tags } = req.body;
@@ -469,7 +439,7 @@ app.put("/notes/:id", verifyToken, async (req, res) => {
   }
 });
 
-// Delete a note (unchanged)
+// Delete a note (modified for soft delete)
 app.delete("/notes/:id", verifyToken, async (req, res) => {
   const { id } = req.params;
   try {
@@ -494,7 +464,7 @@ app.delete("/notes/:id", verifyToken, async (req, res) => {
   }
 });
 
-// Retrieve recently deleted notes (unchanged)
+// NEW: Retrieve recently deleted notes
 app.get("/recently-deleted", verifyToken, async (req, res) => {
   try {
     const deletedNotes = await dbPool.query(
@@ -512,7 +482,7 @@ app.get("/recently-deleted", verifyToken, async (req, res) => {
   }
 });
 
-// Permanently delete a note from recently deleted (unchanged)
+// NEW: Permanently delete a note from recently deleted
 app.delete("/recently-deleted/:id", verifyToken, async (req, res) => {
   const { id } = req.params;
   try {
@@ -539,7 +509,4 @@ app.delete("/recently-deleted/:id", verifyToken, async (req, res) => {
 // ===== SERVER SETUP =====
 
 const PORT = process.env.PORT || 5000;
-// add 0.0.0.0 so it’s reachable from your phone/emulator
-app.listen(PORT, '0.0.0.0', () => 
-  console.log(`Server running on port ${PORT}`) 
-);
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
