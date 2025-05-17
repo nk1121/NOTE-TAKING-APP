@@ -526,4 +526,7 @@ app.delete("/recently-deleted/:id", verifyToken, async (req, res) => {
 // ===== SERVER SETUP =====
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// add 0.0.0.0 so it’s reachable from your phone/emulator
+app.listen(PORT, '0.0.0.0', () => 
+  console.log(`Server running on port ${PORT}`) 
+);

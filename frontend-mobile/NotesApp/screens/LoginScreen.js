@@ -14,24 +14,31 @@ const LoginScreen = ({ navigation }) => {
       Alert.alert('Error', 'Please enter both email and password.');
       return;
     }
-
+  
     try {
       if (!BASE_URL) {
         throw new Error('BASE_URL is not defined. Please check config.js.');
       }
-
+  
+      console.log("Starting login request...");
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+  
       const response = await fetch(`${BASE_URL}/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ email, password }),
+        signal: controller.signal,
       });
-
-      // Log the raw response to debug
+  
+      clearTimeout(timeoutId);
+      console.log("Login response received:", response.status);
+  
       const responseText = await response.text();
       console.log('Raw response (handleLogin):', responseText);
-
+  
       if (!response.ok) {
         let errorData;
         try {
@@ -41,13 +48,18 @@ const LoginScreen = ({ navigation }) => {
         }
         throw new Error(errorData.error || `Login failed (Status: ${response.status})`);
       }
-
+  
       const data = JSON.parse(responseText);
       await AsyncStorage.setItem('token', data.token);
       await AsyncStorage.setItem('username', data.username);
       setIsAuthenticated(true);
+      console.log("Login successful");
     } catch (err) {
-      Alert.alert('Error', err.message);
+      if (err.name === "AbortError") {
+        Alert.alert('Error', 'Request timed out. Please check your network or try again later.');
+      } else {
+        Alert.alert('Error', err.message);
+      }
     }
   };
 

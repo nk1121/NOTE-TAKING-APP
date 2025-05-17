@@ -43,7 +43,7 @@ const CustomDrawerContent = (props) => {
       setUsername(storedUsername || "User");
       try {
         const token = await AsyncStorage.getItem("token");
-        const response = await fetch("http://172.19.139.223:5000/notes", {
+        const response = await fetch("http://172.19.139.9:5000/notes", {
           headers: { Authorization: `Bearer ${token}` },
         });
         const responseText = await response.text();
@@ -262,12 +262,23 @@ const App = () => {
 
   useEffect(() => {
     const checkAuth = async () => {
+      console.log("Starting auth check...");
       try {
         const token = await AsyncStorage.getItem("token");
+        console.log("Token:", token ? "Found" : "Not found");
         if (token) {
+          console.log("Making request to /notes...");
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 10000);
+    
           const response = await fetch("http://172.19.139.223:5000/notes", {
             headers: { Authorization: `Bearer ${token}` },
+            signal: controller.signal,
           });
+    
+          clearTimeout(timeoutId);
+          console.log("Response received:", response.status);
+    
           const responseText = await response.text();
           if (!response.ok) {
             let errorData;
@@ -281,15 +292,20 @@ const App = () => {
             throw new Error(errorData.error || "Failed to verify token");
           }
           setIsAuthenticated(true);
+          console.log("User authenticated");
           await fetchNotesCount();
           await fetchFavoritesCount();
           await fetchDeletedCount();
         } else {
           setIsAuthenticated(false);
+          console.log("No token, showing login screen");
         }
       } catch (error) {
         console.error("Error checking auth:", error.message);
-        if (error.message.includes("Invalid token")) {
+        if (error.name === "AbortError") {
+          console.error("Request timed out");
+          Alert.alert("Error", "Unable to connect to the server. Please check your network or try again later.");
+        } else if (error.message.includes("Invalid token")) {
           await AsyncStorage.removeItem("token");
           await AsyncStorage.removeItem("username");
         }
@@ -302,7 +318,7 @@ const App = () => {
   const fetchNotesCount = async () => {
     try {
       const token = await AsyncStorage.getItem("token");
-      const response = await fetch("http://172.19.139.223:5000/notes", {
+      const response = await fetch("http://172.19.139.9:5000/notes", {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = JSON.parse(await response.text());
@@ -335,11 +351,7 @@ const App = () => {
   };
 
   if (isAuthenticated === null) {
-    return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <Text>Loading...</Text>
-      </View>
-    );
+    return <SplashScreen />;
   }
 
   return (
