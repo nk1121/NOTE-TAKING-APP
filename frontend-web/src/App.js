@@ -15,6 +15,7 @@ import ForgotPasswordPage from './components/ForgotPasswordPage';
 import ResetPasswordPage from './components/ResetPasswordPage';
 import ProfilePage from './components/ProfilePage';
 import './App.css';
+import logo from './components/assets/LOGO NO BG.png'
 
 // Memoize the React Quill component to prevent unnecessary re-renders
 const MemoizedReactQuill = memo(ReactQuill, (prevProps, nextProps) => {
@@ -758,13 +759,19 @@ const App = () => {
     setTimerRunning(false);
   };
 
-  const AppNavbar = () => (
+   const AppNavbar = () => (
     <Navbar bg="dark" variant="dark" expand="lg" className="shadow-sm">
       <div className="navbar-content">
         <div className="app-title-container">
-          <Navbar.Brand href="#home" className="app-title">
-            NoteApp
-          </Navbar.Brand>
+        <Navbar.Brand href="#home" className="app-title d-flex align-items-center">
+  <img
+    src={logo}
+    alt="PixelNotes Icon"
+    className="me-2"
+    style={{ width: '40px', height: '40px' }}
+  />
+  PixelNotes
+</Navbar.Brand>
         </div>
         <div className="search-container-wrapper">
           <Form inline className="search-form">
@@ -778,6 +785,7 @@ const App = () => {
             </div>
           </Form>
         </div>
+
         <div className="timer-controls">
           <Button
             variant="outline-light"

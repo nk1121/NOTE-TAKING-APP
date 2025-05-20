@@ -3,12 +3,13 @@ import { Form, Button, Alert, InputGroup } from 'react-bootstrap';
 import { useNavigate, Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
-import './LoginPage.css'; // Ensure the CSS file is imported
+import './LoginPage.css'; // Ensure this file exists
 
 const LoginPage = ({ onLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [emailError, setEmailError] = useState(false);
   const [passwordError, setPasswordError] = useState(false);
@@ -17,6 +18,7 @@ const LoginPage = ({ onLogin }) => {
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
     setEmailError(false);
     setPasswordError(false);
 
@@ -24,10 +26,12 @@ const LoginPage = ({ onLogin }) => {
     if (!password) setPasswordError(true);
     if (!email || !password) {
       setError('Please fill in all fields.');
+      console.log('Validation failed: Missing fields');
       return;
     }
 
     try {
+      console.log('Attempting login with:', { email, password });
       const response = await fetch('http://localhost:5000/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -36,6 +40,7 @@ const LoginPage = ({ onLogin }) => {
 
       const data = await response.json();
       if (!response.ok) {
+        console.log('Login failed:', data.error);
         if (data.error === 'Invalid email or password') {
           setEmailError(true);
           setPasswordError(true);
@@ -43,11 +48,24 @@ const LoginPage = ({ onLogin }) => {
         throw new Error(data.error || 'Login failed');
       }
 
+      console.log('Login successful, setting token and username:', data);
       localStorage.setItem('token', data.token);
-      localStorage.setItem('username', data.username); // Store the username
+      localStorage.setItem('username', data.username);
+
+      // Set success message and ensure it renders before redirect
+      setSuccess('Login successful! Redirecting...');
+      console.log('Success message set');
+
+      // Call onLogin immediately
       onLogin();
-      navigate('/app');
+
+      // Delay navigation to allow the success message to be visible
+      setTimeout(() => {
+        console.log('Redirecting to /app');
+        navigate('/app');
+      }, 5000); // 2-second delay
     } catch (err) {
+      console.error('Login error:', err.message);
       setError(err.message);
     }
   };
@@ -59,10 +77,15 @@ const LoginPage = ({ onLogin }) => {
   return (
     <div className="login-page">
       <div className="login-container card p-4 shadow-lg">
-        <h2 className="text-center mb-4">Login to NoteApp</h2>
+        <h2 className="text-center mb-4">Login to PixelNotes</h2>
         {error && (
-          <Alert variant={error.includes('successful') ? 'success' : 'danger'} className="text-center">
+          <Alert variant="danger" className="text-center">
             {error}
+          </Alert>
+        )}
+        {success && (
+          <Alert variant="success" className="text-center">
+            {success}
           </Alert>
         )}
         <Form onSubmit={handleLogin}>

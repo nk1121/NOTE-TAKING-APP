@@ -5,7 +5,7 @@ const SplashScreen = () => {
   return (
     <div className="splash-screen">
       <div className="splash-content">
-        <h1>Note-Taking App</h1>
+        <h1>Pixel Notes</h1>
         <Spinner animation="border" variant="primary" />
         <p>Loading...</p>
       </div>
